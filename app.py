@@ -3,12 +3,26 @@ import os, json, uuid, io, sqlite3, time
 from werkzeug.utils import secure_filename
 from functools import wraps
 from gtts import gTTS
+
+# Try deep-translator first (more reliable), fallback to googletrans
+_has_translate = False
+_translator_type = None
+
 try:
-    from googletrans import Translator
-    _translator = Translator()
+    from deep_translator import GoogleTranslator as DeepGoogleTranslator
     _has_translate = True
-except:
-    _has_translate = False
+    _translator_type = 'deep_translator'
+except ImportError:
+    pass
+
+if not _has_translate:
+    try:
+        from googletrans import Translator
+        _translator = Translator()
+        _has_translate = True
+        _translator_type = 'googletrans'
+    except ImportError:
+        pass
 
 app = Flask(__name__)
 app.secret_key = 'reel_generator_secret_2024'
@@ -150,15 +164,23 @@ def generate_tts():
     gtts_lang = GTTS_LANG_MAP.get(lang_code, lang_code.split('-')[0])
 
     # ── Step 1: Auto-translate input text to target language ──────
+    # Always translate — user may type in any language (Hindi, English, Gujarati, etc.)
+    # We must convert to target language before generating voice
     translated_text = text
-    if _has_translate and gtts_lang != 'en':
+    if _has_translate:
         try:
-            result = _translator.translate(text, dest=gtts_lang)
-            if result and result.text:
-                translated_text = result.text
+            if _translator_type == 'deep_translator':
+                translated_text = DeepGoogleTranslator(source='auto', target=gtts_lang).translate(text)
+            elif _translator_type == 'googletrans':
+                result = _translator.translate(text, dest=gtts_lang)
+                if result and result.text:
+                    translated_text = result.text
+            print(f'[translate] {text!r} → ({gtts_lang}) {translated_text!r}')
         except Exception as te:
             print(f'[translate] failed: {te}')
             translated_text = text  # fallback — original text
+    else:
+        print('[translate] No translator available — using original text')
 
     # ── Step 2: gTTS generate ─────────────────────────────────────
     try:
