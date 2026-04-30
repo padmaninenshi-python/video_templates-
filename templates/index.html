@@ -4013,11 +4013,11 @@ function seekRec(e) {
 }
 
 function addRecToVideo() {
-  if (!_recSelectedClip) { showToast('⚠️', 'Koi recording selected nahi!'); return; }
+  if (!_recSelectedClip) { showToast('⚠️', 'not recording selected!'); return; }
   // Mark recInReel as checked so export picks it up
   const cb = document.getElementById('recInReel');
   if (cb) cb.checked = true;
-  showToast('🎙️', 'Recording video mein add ho gayi! Ab Export karo.');
+  showToast('🎙️', 'Recording add in video ! now Export .');
   // Flash export buttons
   const exportBtns = document.querySelectorAll('[onclick="exportReel()"]');
   exportBtns.forEach(b => {
