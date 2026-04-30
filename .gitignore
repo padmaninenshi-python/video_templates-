@@ -1,0 +1,35 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Database (optional — remove this line if you want to commit it)
+database.db
+
+# Old migration file
+db.json
+db.json.migrated
+
+# User uploaded content
+static/uploads/
+static/voice/
+static/output/
+outputs/
+
+# Old TTS files (if any leftover)
+static/tts_*.mp3
+static/tts_*.webm
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
