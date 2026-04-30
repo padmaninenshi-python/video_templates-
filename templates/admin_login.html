@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caryanams Admin Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f4f5fb; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:'DM Sans',sans-serif; }
+.card { background:#fff; border-radius:20px; box-shadow:0 4px 40px rgba(109,74,252,0.10); padding:48px 40px; width:400px; max-width:95vw; }
+.logo-wrap { display:flex; align-items:center; justify-content:center; margin-bottom:4px; background:#f4f5fb; border-radius:12px; padding:10px 16px; }
+.badge { display:block; width:fit-content; margin:6px auto 28px; background:#6d4afc; color:#fff; font-size:11px; font-weight:700; padding:3px 12px; border-radius:20px; letter-spacing:1px; }
+h2 { text-align:center; font-size:16px; font-weight:600; color:#1a1a2e; margin-bottom:28px; }
+.form-group { margin-bottom:18px; }
+label { display:block; font-size:12px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:7px; }
+.input-wrap { position:relative; }
+.input-wrap i { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:#bbb; font-size:14px; }
+input { width:100%; padding:12px 14px 12px 38px; border:1.5px solid #e8e8f4; border-radius:10px; font-size:14px; font-family:'DM Sans',sans-serif; outline:none; transition:border .2s; background:#fafaff; color:#1a1a2e; }
+input:focus { border-color:#6d4afc; }
+.btn-login { width:100%; padding:13px; background:#6d4afc; color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; font-family:'DM Sans',sans-serif; cursor:pointer; margin-top:8px; transition:background .2s; }
+.btn-login:hover { background:#5a38e0; }
+.error { background:#fff0f0; color:#e53e3e; border:1px solid #fec5c5; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.hint { text-align:center; font-size:12px; color:#bbb; margin-top:20px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-wrap">
+    <img src="data:image/png;base64,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" alt="Caryanams" style="height:100px;width:auto;object-fit:contain;max-width:220px;display:block;">
+  </div>
+  <span class="badge">ADMIN PANEL</span>
+  <h2>Sign in to continue</h2>
+
+  {% if error %}
+  <div class="error"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>
+  {% endif %}
+
+  <form method="POST" action="/admin/login">
+    <div class="form-group">
+      <label>Username</label>
+      <div class="input-wrap">
+        <i class="fas fa-user"></i>
+        <input type="text" name="username" placeholder="admin" required autocomplete="username">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <div class="input-wrap">
+        <i class="fas fa-lock"></i>
+        <input type="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+    </div>
+    <button type="submit" class="btn-login"><i class="fas fa-sign-in-alt"></i> &nbsp;Login</button>
+  </form>
+  <div class="hint">Default: admin / admin123</div>
+</div>
+</body>
+</html>

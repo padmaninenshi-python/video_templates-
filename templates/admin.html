@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caryanams Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg: #f4f5fb; --surface: #ffffff; --surface2: #f0f1f8; --surface3: #e4e6f0;
+  --accent: #6d4afc; --accent2: #fc5c8a; --accent3: #00c9a7;
+  --text: #1a1a2e; --muted: #888aaa; --border: rgba(109,74,252,0.15);
+  --glow: 0 0 30px rgba(124,92,252,0.3); --radius: 14px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
+
+.admin-header {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:16px 30px; display:flex; align-items:center; gap:16px;
+  position:sticky; top:0; z-index:100;
+}
+.brand { font-family:'Syne',sans-serif; font-size:20px; font-weight:800;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; } 
+.brand-badge {
+  background:var(--accent); color:white; font-size:11px; font-weight:700;
+  padding:3px 8px; border-radius:12px; -webkit-text-fill-color:white;
+}
+.header-actions { margin-left:auto; display:flex; gap:10px; }
+
+.btn { padding:8px 18px; border-radius:8px; border:none;
+  font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500;
+  cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:6px; }
+.btn-ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-ghost:hover { background:var(--surface3); }
+.btn-primary { background:var(--accent); color:white; }
+.btn-primary:hover { filter:brightness(1.15); }
+.btn-danger { background:#ef4444; color:white; }
+.btn-success { background:#22c55e; color:white; }
+.btn-sm { padding:5px 12px; font-size:12px; }
+
+.admin-layout { display:flex; min-height:calc(100vh - 57px); }
+
+.admin-nav {
+  width:220px; background:var(--surface); border-right:1px solid var(--border);
+  padding:20px 12px; flex-shrink:0; position:sticky; top:57px; height:calc(100vh - 57px);
+  overflow-y:auto;
+}
+.nav-group { margin-bottom:20px; }
+.nav-group-label { font-size:10px; color:var(--muted); font-weight:700; 
+  letter-spacing:2px; text-transform:uppercase; padding:0 10px 8px; }
+.nav-item {
+  display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px;
+  cursor:pointer; font-size:13px; color:var(--muted); transition:all .2s;
+  border:none; background:none; width:100%; text-align:left;
+}
+.nav-item:hover { background:var(--surface2); color:var(--text); }
+.nav-item.active { background:rgba(124,92,252,.15); color:var(--accent); }
+
+.admin-content { flex:1; padding:28px; overflow-y:auto; }
+
+.section { display:none; }
+.section.active { display:block; }
+
+.section-header { margin-bottom:24px; }
+.section-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; }
+.section-desc { font-size:13px; color:var(--muted); margin-top:4px; }
+
+/* STATS CARDS */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+.stat-card { background:var(--surface); border-radius:var(--radius); padding:20px;
+  border:1px solid var(--border); }
+.stat-value { font-size:32px; font-weight:700; font-family:'Syne',sans-serif; }
+.stat-label { font-size:12px; color:var(--muted); margin-top:4px; }
+.stat-icon { font-size:24px; margin-bottom:8px; }
+
+/* TEMPLATE MANAGEMENT */
+.template-admin-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px; }
+.t-admin-card {
+  background:var(--surface); border-radius:var(--radius); overflow:hidden;
+  border:1px solid var(--border); transition:all .2s;
+}
+.t-admin-card:hover { border-color:var(--accent); }
+.t-admin-thumb {
+  width:100%; aspect-ratio:9/16; background:var(--surface2);
+  display:flex; align-items:center; justify-content:center; font-size:40px;
+  position:relative;
+}
+.t-admin-overlay {
+  position:absolute; inset:0; background:rgba(0,0,0,.7);
+  display:none; align-items:center; justify-content:center; gap:8px;
+}
+.t-admin-card:hover .t-admin-overlay { display:flex; }
+.t-admin-info { padding:10px 12px; display:flex; align-items:center; justify-content:space-between; }
+.t-admin-name { font-size:12px; font-weight:600; }
+.t-admin-toggle { width:36px; height:20px; border-radius:10px; cursor:pointer;
+  transition:.2s; border:none; position:relative; flex-shrink:0; }
+.t-admin-toggle.on { background:var(--accent); }
+.t-admin-toggle.off { background:var(--surface3); }
+.t-admin-toggle::after { content:''; position:absolute; top:3px;
+  width:14px; height:14px; border-radius:50%; background:white; transition:.2s; }
+.t-admin-toggle.on::after { left:19px; }
+.t-admin-toggle.off::after { left:3px; }
+
+/* MUSIC MANAGEMENT */
+.music-admin-list { display:flex; flex-direction:column; gap:10px; }
+.music-admin-item {
+  background:var(--surface); border-radius:var(--radius); padding:16px;
+  display:flex; align-items:center; gap:14px; border:1px solid var(--border);
+}
+.m-icon { width:44px; height:44px; border-radius:10px; flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex; align-items:center; justify-content:center; font-size:20px; }
+.m-info { flex:1; }
+.m-name { font-size:14px; font-weight:600; }
+.m-meta { font-size:12px; color:var(--muted); }
+.m-actions { display:flex; gap:8px; }
+
+/* UPLOAD ZONE */
+.upload-zone {
+  border:2px dashed var(--border); border-radius:var(--radius);
+  padding:40px; text-align:center; cursor:pointer; transition:all .2s;
+  margin-bottom:20px; background:var(--surface);
+}
+.upload-zone:hover { border-color:var(--accent); background:rgba(124,92,252,.05); }
+.uz-icon { font-size:40px; color:var(--accent); margin-bottom:12px; display:block; }
+.uz-text { font-size:14px; color:var(--muted); }
+
+/* FORM */
+.form-group { margin-bottom:16px; }
+.form-label { font-size:12px; font-weight:600; color:var(--muted); 
+  text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; display:block; }
+.form-input, .form-select {
+  width:100%; padding:10px 14px; border-radius:8px;
+  border:1px solid var(--border); background:var(--surface2);
+  color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px;
+  outline:none; transition:border-color .2s;
+}
+.form-input:focus, .form-select:focus { border-color:var(--accent); }
+
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+.card { background:var(--surface); border-radius:var(--radius); border:1px solid var(--border); padding:20px; margin-bottom:16px; }
+.card-title { font-size:14px; font-weight:700; margin-bottom:12px; }
+
+/* TOAST */
+.toast {
+  position:fixed; bottom:24px; right:24px; z-index:2000;
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:14px 20px; display:flex; align-items:center; gap:12px;
+  box-shadow:0 20px 40px rgba(0,0,0,.4); transform:translateX(120%); transition:.3s;
+}
+.toast.show { transform:translateX(0); }
+
+/* TABLE */
+.admin-table { width:100%; border-collapse:collapse; }
+.admin-table th, .admin-table td { padding:12px 16px; text-align:left; border-bottom:1px solid var(--border); font-size:13px; }
+.admin-table th { color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:1px; }
+.admin-table tr:hover td { background:var(--surface2); }
+
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#ccc; border-radius:2px; }
+
+@media (max-width:900px) {
+  .stats-grid { grid-template-columns:1fr 1fr; }
+  .admin-nav { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header class="admin-header">
+  <span class="brand">Caryanams</span>
+  <span class="brand-badge">ADMIN</span>
+  <div class="header-actions">
+    <button class="btn btn-ghost" onclick="window.location='/'"><i class="fas fa-arrow-left"></i> Back to Editor</button>
+    <button class="btn btn-danger" onclick="window.location='/admin/logout'"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+</header>
+
+<div class="admin-layout">
+  <nav class="admin-nav">
+    <div class="nav-group">
+      <div class="nav-group-label">Overview</div>
+      <button class="nav-item active" onclick="showSection('dashboard',this)"><i class="fas fa-tachometer-alt fa-fw"></i> Dashboard</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Content</div>
+      <button class="nav-item" onclick="showSection('templates',this)"><i class="fas fa-film fa-fw"></i> Templates</button>
+      <button class="nav-item" onclick="showSection('music',this)"><i class="fas fa-music fa-fw"></i> Music Library</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Settings</div>
+      <button class="nav-item" onclick="showSection('settings',this)"><i class="fas fa-cog fa-fw"></i> Settings</button>
+    </div>
+  </nav>
+
+  <div class="admin-content">
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="section-dashboard">
+      <div class="section-header">
+        <div class="section-title">Dashboard</div>
+        <div class="section-desc">Caryanams overview and quick stats</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🎬</div>
+          <div class="stat-value" id="stat-templates">—</div>
+          <div class="stat-label">Total Templates</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-active">—</div>
+          <div class="stat-label">Active Templates</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🎵</div>
+          <div class="stat-value" id="stat-music">—</div>
+          <div class="stat-label">Music Tracks</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📁</div>
+          <div class="stat-value" id="stat-projects">—</div>
+          <div class="stat-label">Projects</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Quick Actions</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="showSection('templates',document.querySelector('.nav-item:nth-child(2)'))">
+            <i class="fas fa-plus"></i> Add Template
+          </button>
+          <button class="btn btn-ghost" onclick="showSection('music',document.querySelectorAll('.nav-item')[2])">
+            <i class="fas fa-music"></i> Add Music
+          </button>
+          <button class="btn btn-ghost" onclick="window.location='/'">
+            <i class="fas fa-external-link-alt"></i> Open Editor
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">All Templates</div>
+        <div id="dashTemplateList" style="color:var(--muted);font-size:13px">Loading...</div>
+      </div>
+    </div>
+
+    <!-- TEMPLATES MANAGEMENT -->
+    <div class="section" id="section-templates">
+      <div class="section-header">
+        <div class="section-title">Template Management</div>
+        <div class="section-desc">Enable, disable, preview and manage all reel templates</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Add Custom Template</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Template Name</label>
+            <input class="form-input" id="newTName" placeholder="e.g. Glow Fade">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-select" id="newTCat">
+              <option>Motion</option>
+              <option>Cinematic</option>
+              <option>PPT Style</option>
+              <option>Creative</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Upload HTML File <span style="color:var(--accent)">*</span></label>
+          <div class="upload-zone" onclick="document.getElementById('newTFileInput').click()" style="padding:20px;margin-bottom:8px" id="htmlDropZone">
+            <span class="uz-icon"><i class="fas fa-code"></i></span>
+            <div class="uz-text" id="htmlDropText">Click to upload .html template file<br><span style="font-size:12px">Only .html files accepted</span></div>
+          </div>
+          <input type="file" id="newTFileInput" accept=".html" style="display:none" onchange="loadTemplateFile(event)">
+          <textarea class="form-input" id="newTHtmlContent" rows="4" placeholder="Or paste HTML code here directly..." style="font-family:monospace;font-size:12px;resize:vertical"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="addTemplate()"><i class="fas fa-plus"></i> Add Template</button>
+      </div>
+
+      <div class="template-admin-grid" id="adminTemplateGrid">
+        <div style="color:var(--muted);font-size:13px;padding:20px">Loading...</div>
+      </div>
+    </div>
+
+    <!-- MUSIC MANAGEMENT -->
+    <div class="section" id="section-music">
+      <div class="section-header">
+        <div class="section-title">Music Library</div>
+        <div class="section-desc">Manage built-in background tracks for users</div>
+      </div>
+
+      <div class="upload-zone" onclick="document.getElementById('adminMusicInput').click()">
+        <span class="uz-icon"><i class="fas fa-cloud-upload-alt"></i></span>
+        <div class="uz-text">Click to upload music track<br><span style="font-size:12px">MP3, WAV, OGG supported</span></div>
+      </div>
+      <input type="file" id="adminMusicInput" accept="audio/*" style="display:none" onchange="uploadAdminMusic(event)">
+
+      <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;color:var(--muted)" id="musicCountLabel">0 tracks</span>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="musicSearchInput" placeholder="Search tracks..." style="width:200px;padding:7px 12px" oninput="renderAdminMusic()">
+        </div>
+      </div>
+
+      <div class="music-admin-list" id="adminMusicList">
+        <div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No music yet. Upload your first track!</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="section" id="section-settings">
+      <div class="section-header">
+        <div class="section-title">Settings</div>
+        <div class="section-desc">App configuration and admin credentials</div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">General</div>
+        <div class="form-group">
+          <label class="form-label">App Name</label>
+          <input class="form-input" id="settingAppName" placeholder="Caryanams">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Admin Username</label>
+          <input class="form-input" id="settingUsername" placeholder="admin">
+        </div>
+        <button class="btn btn-success" onclick="saveGeneralSettings()"><i class="fas fa-save"></i> Save General</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Change Password</div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input class="form-input" id="settingNewPwd" type="password" placeholder="Enter new password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input class="form-input" id="settingConfirmPwd" type="password" placeholder="Re-enter new password">
+        </div>
+        <button class="btn btn-primary" onclick="savePassword()"><i class="fas fa-key"></i> Update Password</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <span id="toastIcon">✅</span>
+  <span id="toastText">Done!</span>
+</div>
+
+<script>
+const EMOJIS = {1:'🚗',2:'🎬',3:'✨',4:'⚡',5:'🖼️',6:'📊',7:'🌀',8:'➡️',9:'🔀',10:'🎭',11:'🪟',12:'📦',13:'🔄',14:'📑',15:'💎',16:'📸',17:'🖼️',18:'🎞️',19:'▶️',20:'🌊',21:'🎇'};
+
+let allTemplates = [];
+let allMusic = [];
+
+window.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([loadTemplates(), loadMusic()]);
+  updateStats();
+  loadSettings();
+});
+
+function showSection(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  document.getElementById(`section-${name}`).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+async function loadTemplates() {
+  const res = await fetch('/api/templates');
+  allTemplates = await res.json();
+  renderAdminTemplates();
+  renderDashList();
+}
+
+async function loadMusic() {
+  const res = await fetch('/api/music');
+  allMusic = await res.json();
+  renderAdminMusic();
+}
+
+function updateStats() {
+  document.getElementById('stat-templates').textContent = allTemplates.length;
+  document.getElementById('stat-active').textContent = allTemplates.filter(t=>t.active).length;
+  document.getElementById('stat-music').textContent = allMusic.length;
+  document.getElementById('stat-projects').textContent = '—';
+}
+
+function renderDashList() {
+  const el = document.getElementById('dashTemplateList');
+  el.innerHTML = `<table class="admin-table">
+    <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    ${allTemplates.map(t=>`
+      <tr>
+        <td style="color:var(--muted)">${t.id}</td>
+        <td style="font-weight:600">${t.name}</td>
+        <td><span style="background:var(--surface3);padding:2px 8px;border-radius:12px;font-size:11px">${t.category}</span></td>
+        <td><span style="color:${t.active?'#22c55e':'#ef4444'}">${t.active?'Active':'Disabled'}</span></td>
+        <td style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="window.open('/api/templates/${t.id}','_blank')"><i class="fas fa-eye"></i></button>
+          <button class="btn btn-sm ${t.active?'btn-danger':'btn-success'}" onclick="toggleTemplate('${t.id}')">${t.active?'Disable':'Enable'}</button>
+        </td>
+      </tr>
+    `).join('')}
+    </tbody></table>`;
+}
+
+function renderAdminTemplates() {
+  const grid = document.getElementById('adminTemplateGrid');
+  grid.innerHTML = allTemplates.map(t => {
+    const num = parseInt(t.id.replace('tem','')) || 0;
+    const emoji = EMOJIS[num] || '🎬';
+    return `
+    <div class="t-admin-card">
+      <div class="t-admin-thumb" style="font-size:40px">
+        ${emoji}
+        <div class="t-admin-overlay">
+          <button class="btn btn-ghost btn-sm" onclick="window.open('/api/templates/${t.id}','_blank')"><i class="fas fa-eye"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTemplate('${t.id}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      <div class="t-admin-info">
+        <div>
+          <div class="t-admin-name">${t.name}</div>
+          <div style="font-size:10px;color:var(--muted)">${t.category}</div>
+        </div>
+        <button class="t-admin-toggle ${t.active?'on':'off'}" onclick="toggleTemplate('${t.id}',this)"></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleTemplate(id, btn) {
+  await fetch(`/api/templates/${id}/toggle`, {method:'POST'});
+  const t = allTemplates.find(t=>t.id===id);
+  if (t) { t.active = !t.active; }
+  if (btn) { btn.classList.toggle('on'); btn.classList.toggle('off'); }
+  updateStats();
+  renderDashList();
+  showToast('✅', 'Template updated!');
+}
+
+async function deleteTemplate(id) {
+  if (!confirm('Delete this template?')) return;
+  await fetch(`/api/templates/${id}`, {method:'DELETE'});
+  allTemplates = allTemplates.filter(t=>t.id!==id);
+  renderAdminTemplates(); renderDashList(); updateStats();
+  showToast('🗑️','Template deleted!');
+}
+
+function loadTemplateFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('newTHtmlContent').value = e.target.result;
+    document.getElementById('htmlDropText').innerHTML = '<b style="color:var(--accent)">' + file.name + '</b> loaded ✅<br><span style="font-size:12px">HTML ready to upload</span>';
+  };
+  reader.readAsText(file);
+}
+
+async function addTemplate() {
+  const name = document.getElementById('newTName').value.trim();
+  const cat = document.getElementById('newTCat').value;
+  const html_content = document.getElementById('newTHtmlContent').value.trim();
+  if (!name) { showToast('⚠️','Template name required!'); return; }
+  if (!html_content) { showToast('⚠️','Upload HTML file or paste HTML code!'); return; }
+  const res = await fetch('/api/templates/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,category:cat,file:'',html_content})});
+  const data = await res.json();
+  allTemplates.push(data.template);
+  renderAdminTemplates(); renderDashList(); updateStats();
+  document.getElementById('newTName').value = '';
+  document.getElementById('newTHtmlContent').value = '';
+  document.getElementById('htmlDropText').innerHTML = 'Click to upload .html template file<br><span style="font-size:12px">Only .html files accepted</span>';
+  showToast('✅','Template added!');
+}
+
+async function uploadAdminMusic(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  // Read actual duration before uploading
+  const durStr = await new Promise(resolve => {
+    const tmp = new Audio(URL.createObjectURL(file));
+    tmp.onloadedmetadata = () => { URL.revokeObjectURL(tmp.src); resolve(Math.round(tmp.duration) + 's'); };
+    tmp.onerror = () => resolve('—');
+  });
+  const fd = new FormData();
+  fd.append('music', file);
+  const res = await fetch('/api/upload/music', {method:'POST',body:fd});
+  const data = await res.json();
+  if (data.success) {
+    // Save to music list with real duration
+    const addRes = await fetch('/api/music/add',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:data.name,url:data.url,duration:durStr})});
+    const added = await addRes.json();
+    allMusic.push(added.music);
+    renderAdminMusic(); updateStats();
+    showToast('🎵','Music uploaded!');
+  }
+}
+
+function renderAdminMusic() {
+  const search = document.getElementById('musicSearchInput')?.value?.toLowerCase()||'';
+  const filtered = allMusic.filter(m=>m.name.toLowerCase().includes(search));
+  document.getElementById('musicCountLabel').textContent = `${allMusic.length} track${allMusic.length!==1?'s':''}`;
+  const list = document.getElementById('adminMusicList');
+  if (!filtered.length) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No tracks found.</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(m=>`
+    <div class="music-admin-item" id="mitem_${m.id}">
+      <div class="m-icon">🎵</div>
+      <div class="m-info" style="flex:1;min-width:0">
+        <div class="m-name" id="mname_${m.id}" style="font-size:14px;font-weight:600">${m.name}</div>
+        <div class="m-meta" style="font-size:11px;color:var(--muted)">${m.duration||'—'}</div>
+      </div>
+      <div class="m-actions" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <audio id="maudio_${m.id}" src="${m.url}" style="display:none" onloadedmetadata="updateAdminDuration('${m.id}',this)"></audio>
+        <span id="mdur_${m.id}" style="font-size:12px;color:var(--muted);min-width:36px;text-align:right">${m.start!==undefined&&m.end ? (m.end-m.start)+'s' : (m.duration&&m.duration!=='—' ? m.duration : '—')}</span>
+        <button class="btn btn-ghost btn-sm" id="mplaybtn_${m.id}" onclick="toggleAdminPlay('${m.id}')" title="Play/Pause"><i class="fas fa-play" id="mplayicon_${m.id}"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="renameMusic('${m.id}')" title="Rename"><i class="fas fa-pencil-alt"></i></button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleTrim('${m.id}')" title="Cut / Trim"><i class="fas fa-cut"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMusic('${m.id}')"><i class="fas fa-trash"></i></button>
+      </div>
+      <div id="trim_${m.id}" style="display:none;width:100%;margin-top:10px;padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--muted)">✂️ TRIM — Start &amp; End Point (seconds)</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <label style="font-size:12px">Start: <input type="number" id="trim_s_${m.id}" value="${m.start||0}" min="0" step="0.1" style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text)"> s</label>
+          <label style="font-size:12px">End: <input type="number" id="trim_e_${m.id}" value="${m.end||''}" min="0" step="0.1" placeholder="auto" style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);color:var(--text)"> s</label>
+          <button class="btn btn-primary btn-sm" onclick="saveTrim('${m.id}')"><i class="fas fa-save"></i> Save Trim</button>
+          <button class="btn btn-ghost btn-sm" onclick="previewTrim('${m.id}')"><i class="fas fa-play"></i> Preview</button>
+        </div>
+        <div id="trim_info_${m.id}" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+let adminPlayingId = null;
+function toggleAdminPlay(id) {
+  const audio = document.getElementById(`maudio_${id}`);
+  const icon = document.getElementById(`mplayicon_${id}`);
+  if (!audio) return;
+  if (adminPlayingId && adminPlayingId !== id) {
+    const prev = document.getElementById(`maudio_${adminPlayingId}`);
+    const prevIcon = document.getElementById(`mplayicon_${adminPlayingId}`);
+    if (prev) { prev.pause(); prev.currentTime = 0; }
+    if (prevIcon) prevIcon.className = 'fas fa-play';
+    adminPlayingId = null;
+  }
+  if (audio.paused) {
+    const track = allMusic.find(m => m.id === id);
+    const trimStart = (track && track.start) ? parseFloat(track.start) : 0;
+    const trimEnd = (track && track.end) ? parseFloat(track.end) : null;
+    audio.currentTime = trimStart;
+    audio.play();
+    icon.className = 'fas fa-pause';
+    adminPlayingId = id;
+    audio.ontimeupdate = () => {
+      if (trimEnd && audio.currentTime >= trimEnd) {
+        audio.pause(); audio.currentTime = trimStart;
+        icon.className = 'fas fa-play'; adminPlayingId = null; audio.ontimeupdate = null;
+      }
+    };
+    audio.onended = () => { icon.className = 'fas fa-play'; adminPlayingId = null; };
+  } else {
+    audio.pause();
+    icon.className = 'fas fa-play';
+    adminPlayingId = null;
+  }
+}
+function updateAdminDuration(id, audioEl) {
+  const dur = audioEl.duration;
+  if (!dur || isNaN(dur)) return;
+  const track = allMusic.find(m => m.id === id);
+  const trimDur = (track && track.start !== undefined && track.end) ? (track.end - track.start) : dur;
+  const secs = Math.round(trimDur);
+  const el = document.getElementById(`mdur_${id}`);
+  if (el && (el.textContent === '—' || el.textContent === '')) el.textContent = secs + 's';
+}
+async function deleteMusic(id) {
+  await fetch(`/api/music/${id}`,{method:'DELETE'});
+  allMusic = allMusic.filter(m=>m.id!==id);
+  renderAdminMusic(); updateStats();
+  showToast('🗑️','Track deleted!');
+}
+
+function renameMusic(id) {
+  const nameEl = document.getElementById(`mname_${id}`);
+  const oldName = nameEl.textContent;
+  nameEl.innerHTML = `<input id="rinp_${id}" value="${oldName}" style="border:1.5px solid var(--accent);border-radius:6px;padding:3px 8px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);width:170px;outline:none" onkeydown="if(event.key==='Enter')confirmRename('${id}');if(event.key==='Escape'){this.closest('.m-name').textContent='${oldName.replace(/'/g,"\\'")}'}"> <button class='btn btn-primary btn-sm' onclick="confirmRename('${id}')">OK</button>`;
+  document.getElementById(`rinp_${id}`).focus();
+}
+
+async function confirmRename(id) {
+  const inp = document.getElementById(`rinp_${id}`);
+  if (!inp) return;
+  const newName = inp.value.trim();
+  if (!newName) return;
+  const track = allMusic.find(m=>m.id===id);
+  if (track) track.name = newName;
+  await fetch(`/api/music/${id}/rename`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:newName})});
+  renderAdminMusic();
+  showToast('✏️','Track renamed!');
+}
+
+function toggleTrim(id) {
+  const el = document.getElementById(`trim_${id}`);
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+async function saveTrim(id) {
+  const start = parseFloat(document.getElementById(`trim_s_${id}`).value)||0;
+  const endVal = document.getElementById(`trim_e_${id}`).value;
+  const end = endVal ? parseFloat(endVal) : null;
+  const track = allMusic.find(m=>m.id===id);
+  if (track) { track.start=start; track.end=end; }
+  await fetch(`/api/music/${id}/trim`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({start,end})});
+  const dur = end ? `${(end-start).toFixed(1)}s clip` : `from ${start}s`;
+  document.getElementById(`trim_info_${id}`).textContent = `✅ Saved — ${dur}`;
+  showToast('✂️','Trim saved!');
+}
+
+function previewTrim(id) {
+  const audio = document.getElementById(`maudio_${id}`);
+  const start = parseFloat(document.getElementById(`trim_s_${id}`).value)||0;
+  const endVal = document.getElementById(`trim_e_${id}`).value;
+  const end = endVal ? parseFloat(endVal) : null;
+  audio.currentTime = start;
+  audio.play();
+  if (end) {
+    const stop = () => { if (audio.currentTime >= end) { audio.pause(); audio.removeEventListener('timeupdate', stop); } };
+    audio.addEventListener('timeupdate', stop);
+  }
+  document.getElementById(`trim_info_${id}`).textContent = `▶ Previewing from ${start}s${end?' to '+end+'s':''}...`;
+}
+
+async function loadSettings() {
+  try {
+    const res = await fetch('/api/settings');
+    const s = await res.json();
+    document.getElementById('settingAppName').value = s.app_name || '';
+    document.getElementById('settingUsername').value = s.admin_username || '';
+  } catch(e) {}
+}
+
+async function saveGeneralSettings() {
+  const app_name = document.getElementById('settingAppName').value.trim();
+  const admin_username = document.getElementById('settingUsername').value.trim();
+  if (!app_name) { showToast('⚠️','App name cannot be empty'); return; }
+  await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({app_name,admin_username})});
+  showToast('✅','Settings saved!');
+}
+
+async function savePassword() {
+  const p1 = document.getElementById('settingNewPwd').value;
+  const p2 = document.getElementById('settingConfirmPwd').value;
+  if (!p1) { showToast('⚠️','Enter a new password'); return; }
+  if (p1 !== p2) { showToast('❌','Passwords do not match'); return; }
+  await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_password:p1})});
+  document.getElementById('settingNewPwd').value='';
+  document.getElementById('settingConfirmPwd').value='';
+  showToast('🔑','Password updated!');
+}
+
+function showToast(icon, text) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastText').textContent = text;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
