@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Auto-Velocity Car Edit</title>
+    <style>
+        :root { --neon: #00f2ff; }
+        body { 
+            background: #050505; color: #fff; font-family: 'Verdana', sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            min-height: 100vh; margin: 0; overflow: hidden;
+        }
+
+        #viewport {
+            width: 350px; height: 620px;
+            background: #000; position: relative;
+            border: 2px solid #1a1a1a; border-radius: 20px;
+            overflow: hidden; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.2);
+        }
+
+        .img-slide {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover; opacity: 0;
+            z-index: 1;
+        }
+
+        .active { 
+            opacity: 1; z-index: 2;
+            animation: velocityImpact 0.5s ease-out forwards;
+        }
+
+        @keyframes velocityImpact {
+            0%   { transform: scale(1.6); filter: brightness(4) blur(15px); }
+            40%  { transform: scale(1.1); filter: brightness(1.5) blur(0px); }
+            100% { transform: scale(1);   filter: brightness(1.1); }
+        }
+
+        .vignette {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle, transparent 20%, black 110%);
+            z-index: 5; pointer-events: none;
+        }
+        
+        .text-overlay { 
+            position: absolute; bottom: 50px; z-index: 10; width: 100%; 
+            text-align: center; font-size: 32px; font-weight: 900;
+            color: #fff; text-shadow: 0 0 15px var(--neon);
+            letter-spacing: 4px; font-style: italic;
+        }
+
+        .controls { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="viewport">
+        <div id="display"></div>
+        <div class="vignette"></div>
+        <div class="text-overlay">STREET BEAST</div>
+    </div>
+
+    <canvas id="offscreen" style="display:none"></canvas>
+
+    <script>
+        const display = document.getElementById('display');
+        const offscreen = document.getElementById('offscreen');
+        const ctx = offscreen.getContext('2d');
+        const OUT_W = 1080, OUT_H = 1920;
+
+        let imgElements = [], currentIndex = 0, timer;
+        let currentObjectURLs = [];
+
+        const demoCars = [
+            "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?w=500",
+            "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=500",
+            "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=500",
+            "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=500",
+            "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=500",
+            "https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=500",
+            "https://images.unsplash.com/photo-1526726538690-5cbf22956748?w=500",
+            "https://images.unsplash.com/photo-1542362567-b055002b9134?w=500",
+            "https://images.unsplash.com/photo-1502877338535-766e1452684a?w=500",
+            "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=500",
+            "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=500",
+            "https://images.unsplash.com/photo-1567818735868-e71b99932e29?w=500"
+        ];
+
+        // ---- Auto 9:16 canvas conversion ----
+        function getColor(imgEl) {
+            let r=20,g=20,b=25;
+            try {
+                const tc=document.createElement('canvas'); tc.width=8; tc.height=8;
+                const tc2=tc.getContext('2d');
+                tc2.drawImage(imgEl,0,0,8,8);
+                const d=tc2.getImageData(0,0,8,8).data;
+                let rr=0,gg=0,bb=0,n=0;
+                for(let i=0;i<d.length;i+=4){rr+=d[i];gg+=d[i+1];bb+=d[i+2];n++;}
+                r=Math.floor(rr/n); g=Math.floor(gg/n); b=Math.floor(bb/n);
+            } catch(e){}
+            return {r,g,b};
+        }
+
+        function convertTo916(imgEl) {
+            offscreen.width = OUT_W;
+            offscreen.height = OUT_H;
+
+            const iw = imgEl.naturalWidth;
+            const ih = imgEl.naturalHeight;
+            const imgRatio = iw / ih;
+            const screenRatio = OUT_W / OUT_H; // 0.5625
+
+            // --- BG: stretched cover + dark overlay ---
+            const coverScale = Math.max(OUT_W/iw, OUT_H/ih);
+            const cw=iw*coverScale, ch=ih*coverScale;
+            ctx.drawImage(imgEl, (OUT_W-cw)/2, (OUT_H-ch)/2, cw, ch);
+            ctx.fillStyle = 'rgba(0,0,0,0.82)';
+            ctx.fillRect(0,0,OUT_W,OUT_H);
+
+            // Color tint
+            const {r,g,b} = getColor(imgEl);
+            const dk = (v,a) => Math.max(0,v-a);
+            ctx.fillStyle = `rgba(${dk(r,30)},${dk(g,30)},${dk(b,30)},0.4)`;
+            ctx.fillRect(0,0,OUT_W,OUT_H);
+
+            // --- Main image: smart fit ---
+            let finalW, finalH, fx, fy;
+            if (imgRatio >= screenRatio) {
+                // Landscape → fit width, zoom up to min 75% height
+                const byWidth = OUT_W / imgRatio;
+                const minH = OUT_H * 0.75;
+                if (byWidth < minH) {
+                    finalH = minH;
+                    finalW = minH * imgRatio;
+                    if (finalW > OUT_W * 1.1) { finalW = OUT_W*1.1; finalH = finalW/imgRatio; }
+                } else {
+                    finalW = OUT_W; finalH = byWidth;
+                }
+            } else {
+                // Portrait → fill full height
+                finalH = OUT_H;
+                finalW = OUT_H * imgRatio;
+                if (finalW > OUT_W) { finalW=OUT_W; finalH=OUT_W/imgRatio; }
+            }
+            fx = (OUT_W-finalW)/2;
+            fy = (OUT_H-finalH)/2;
+            ctx.drawImage(imgEl, fx, fy, finalW, finalH);
+
+            // Edge fades
+            if (fy > 10) {
+                const tf = ctx.createLinearGradient(0,fy-10,0,fy+finalH*0.12);
+                tf.addColorStop(0,'rgba(0,0,0,0.9)'); tf.addColorStop(1,'transparent');
+                ctx.fillStyle=tf; ctx.fillRect(0,0,OUT_W,fy+finalH*0.12);
+                const bf = ctx.createLinearGradient(0,fy+finalH*0.88,0,OUT_H);
+                bf.addColorStop(0,'transparent'); bf.addColorStop(1,'rgba(0,0,0,0.9)');
+                ctx.fillStyle=bf; ctx.fillRect(0,fy+finalH*0.88,OUT_W,OUT_H-(fy+finalH*0.88));
+            }
+            if (fx > 10) {
+                const lf = ctx.createLinearGradient(fx-10,0,fx+finalW*0.1,0);
+                lf.addColorStop(0,'rgba(0,0,0,0.9)'); lf.addColorStop(1,'transparent');
+                ctx.fillStyle=lf; ctx.fillRect(0,0,fx+finalW*0.1,OUT_H);
+                const rf = ctx.createLinearGradient(fx+finalW*0.9,0,OUT_W,0);
+                rf.addColorStop(0,'transparent'); rf.addColorStop(1,'rgba(0,0,0,0.9)');
+                ctx.fillStyle=rf; ctx.fillRect(fx+finalW*0.9,0,OUT_W-(fx+finalW*0.9),OUT_H);
+            }
+
+            // Vignette
+            const vig=ctx.createRadialGradient(OUT_W/2,OUT_H/2,OUT_H*0.2,OUT_W/2,OUT_H/2,OUT_H*0.72);
+            vig.addColorStop(0,'transparent'); vig.addColorStop(1,'rgba(0,0,0,0.3)');
+            ctx.fillStyle=vig; ctx.fillRect(0,0,OUT_W,OUT_H);
+
+            return offscreen.toDataURL('image/jpeg', 0.93);
+        }
+
+        // ---- Init & Loop ----
+        function cleanMemory() {
+            currentObjectURLs.forEach(url => URL.revokeObjectURL(url));
+            currentObjectURLs = [];
+        }
+
+        function initImages(sources) {
+            if(timer) clearTimeout(timer);
+            display.innerHTML = "";
+            imgElements = [];
+            currentIndex = 0;
+            let loaded = 0;
+            const total = sources.length;
+
+            sources.forEach((src, i) => {
+                const tmpImg = new Image();
+                tmpImg.crossOrigin = 'anonymous';
+                tmpImg.onload = () => {
+                    const dataUrl = convertTo916(tmpImg);
+                    const slide = document.createElement('img');
+                    slide.src = dataUrl;
+                    slide.className = 'img-slide';
+                    display.appendChild(slide);
+                    imgElements[i] = slide;
+                    loaded++;
+                    if (loaded === total) startEditLoop();
+                };
+                tmpImg.onerror = () => { loaded++; if(loaded===total) startEditLoop(); };
+                tmpImg.src = src;
+            });
+        }
+
+        function startEditLoop() {
+            if(timer) clearTimeout(timer);
+            const run = () => {
+                const slides = imgElements.filter(Boolean);
+                if (!slides.length) return;
+                slides.forEach(img => img.classList.remove('active'));
+                while (!imgElements[currentIndex]) currentIndex = (currentIndex+1) % imgElements.length;
+                imgElements[currentIndex].classList.add('active');
+                let nextDelay = (currentIndex % 3 === 0) ? 900 : 200;
+                currentIndex = (currentIndex + 1) % imgElements.length;
+                timer = setTimeout(run, nextDelay);
+            };
+            run();
+        }
+
+        window.onload = () => initImages(demoCars);
+
+        window.addEventListener('message', function(e) {
+            if (!e.data || e.data.type !== 'REELFORGE_IMAGES') return;
+            var urls = e.data.images;
+            if (!urls || !urls.length) return;
+            cleanMemory();
+            currentObjectURLs = [];
+            initImages(urls);
+        });
+    </script>
+</body>
+</html>

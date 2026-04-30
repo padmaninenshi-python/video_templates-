@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PPT Exit Animation Slideshow</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial;
+}
+.slide {
+    width: 350px;
+    height: 620px;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid #fff;
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(255,255,255,0.1);
+}
+.slide img {
+    position: absolute;
+    width: 100%; height: 100%;
+    object-fit: cover;
+}
+.enter { animation: fadeIn 0.9s forwards; }
+@keyframes fadeIn {
+    from { opacity:0; transform: scale(0.95); }
+    to   { opacity:1; transform: scale(1); }
+}
+.exit-disappear { opacity: 0; }
+.exit-fade { animation: fadeOut 0.9s forwards; }
+@keyframes fadeOut { to { opacity:0; } }
+.exit-fly { animation: flyOut 0.9s forwards; }
+@keyframes flyOut { to { transform: translateX(400px); opacity:0; } }
+.exit-float { animation: floatOut 0.9s forwards; }
+@keyframes floatOut { to { transform: translateY(-300px); opacity:0; } }
+.exit-zoom { animation: zoomOut 0.9s forwards; }
+@keyframes zoomOut { to { transform: scale(0.1); opacity:0; } }
+.exit-wipe { animation: wipeOut 0.9s forwards; }
+@keyframes wipeOut {
+    from { clip-path: inset(0 0 0 0); }
+    to   { clip-path: inset(0 100% 0 0); }
+}
+.exit-split { animation: splitOut 0.9s forwards; }
+@keyframes splitOut {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); opacity:0; }
+}
+.controls { display: none !important; }
+</style>
+</head>
+<body>
+<div class="slide">
+    <img id="img" src="">
+</div>
+<script>
+let images = [
+    "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1000",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1000",
+    "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1000",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1000",
+    "https://images.unsplash.com/photo-1492724441997-5dc865305da7?w=1000"
+];
+const exits = ["exit-disappear","exit-fade","exit-fly","exit-float","exit-zoom","exit-wipe","exit-split"];
+const img = document.getElementById("img");
+let idx = 0;
+
+function show() {
+    img.className = "";
+    img.src = images[idx % images.length];
+    img.classList.add("enter");
+    setTimeout(() => {
+        img.classList.remove("enter");
+        img.classList.add(exits[idx % exits.length]);
+    }, 2500);
+    idx++;
+    setTimeout(show, 4000);
+}
+window.onload = show;
+
+window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'REELFORGE_IMAGES') return;
+    if (!e.data.images || !e.data.images.length) return;
+    images = e.data.images;
+    idx = 0;
+});
+</script>
+</body>
+</html>

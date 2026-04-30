@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wipe Motion Slideshow</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial;
+}
+.slide {
+    width: 350px;
+    height: 620px;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid #fff;
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(255,255,255,0.08);
+}
+.slide img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    position: absolute;
+}
+.wipe-right { animation: wipeRight 1.2s forwards; }
+@keyframes wipeRight {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+.wipe-left { animation: wipeLeft 1.2s forwards; }
+@keyframes wipeLeft {
+    from { clip-path: inset(0 0 0 100%); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+.wipe-up { animation: wipeUp 1.2s forwards; }
+@keyframes wipeUp {
+    from { clip-path: inset(100% 0 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+.wipe-down { animation: wipeDown 1.2s forwards; }
+@keyframes wipeDown {
+    from { clip-path: inset(0 0 100% 0); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+.exit { animation: fadeOut 1s forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+.controls { display: none !important; }
+</style>
+</head>
+<body>
+<div class="slide">
+    <img id="img" src="">
+</div>
+<script>
+let images = [
+    "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1000",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1000",
+    "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1000",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1000",
+    "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1000",
+    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1000",
+    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1000"
+];
+const wipes = ["wipe-right","wipe-left","wipe-up","wipe-down"];
+const img = document.getElementById("img");
+let idx = 0;
+
+function showSlide() {
+    const wipe = wipes[idx % wipes.length];
+    img.className = "";
+    img.src = images[idx % images.length];
+    img.classList.add(wipe);
+    setTimeout(() => {
+        img.classList.remove(wipe);
+        img.classList.add("exit");
+    }, 2500);
+    idx++;
+    setTimeout(showSlide, 3500);
+}
+window.onload = showSlide;
+
+window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'REELFORGE_IMAGES') return;
+    if (!e.data.images || !e.data.images.length) return;
+    images = e.data.images;
+    idx = 0;
+});
+</script>
+</body>
+</html>

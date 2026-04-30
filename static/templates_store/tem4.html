@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pixel Slideshow</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden; background: #000;
+    display: flex; justify-content: center; align-items: center;
+}
+#frame {
+    width: 360px; height: 640px;
+    position: relative; overflow: hidden;
+    border: 1px solid #444; flex-shrink: 0;
+}
+.slide {
+    position: absolute; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0;
+    transition: opacity 0.5s ease;
+}
+.active { opacity: 1; z-index: 2; }
+.pulse { animation: pulse 1s infinite; }
+@keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.08)} 100%{transform:scale(1)} }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.grow { animation: grow 1s ease-in-out infinite; }
+@keyframes grow { 0%{transform:scale(1)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
+.teeter { animation: teeter 0.6s infinite; }
+@keyframes teeter { 0%{transform:rotate(0deg)} 25%{transform:rotate(3deg)} 50%{transform:rotate(-3deg)} 75%{transform:rotate(2deg)} 100%{transform:rotate(0deg)} }
+</style>
+</head>
+<body>
+<div id="frame"></div>
+<canvas id="offscreen" style="display:none"></canvas>
+<script>
+const frame = document.getElementById('frame');
+const offscreen = document.getElementById('offscreen');
+const ctx = offscreen.getContext('2d');
+const OUT_W = 1080, OUT_H = 1920;
+
+let slides = [], index = 0, timer;
+let currentObjectURLs = [];
+const animClasses = ['pulse','spin','grow','teeter'];
+
+const demoImages = [
+    "https://picsum.photos/id/1011/400/700",
+    "https://picsum.photos/id/1015/400/700",
+    "https://picsum.photos/id/1016/400/700"
+];
+
+function getColor(imgEl) {
+    let r=20,g=20,b=25;
+    try {
+        const tc=document.createElement('canvas'); tc.width=8; tc.height=8;
+        const tc2=tc.getContext('2d');
+        tc2.drawImage(imgEl,0,0,8,8);
+        const d=tc2.getImageData(0,0,8,8).data;
+        let rr=0,gg=0,bb=0,n=0;
+        for(let i=0;i<d.length;i+=4){rr+=d[i];gg+=d[i+1];bb+=d[i+2];n++;}
+        r=Math.floor(rr/n); g=Math.floor(gg/n); b=Math.floor(bb/n);
+    } catch(e){}
+    return {r,g,b};
+}
+
+function convertTo916(imgEl) {
+    offscreen.width = OUT_W; offscreen.height = OUT_H;
+    const iw=imgEl.naturalWidth, ih=imgEl.naturalHeight;
+    const imgRatio=iw/ih, screenRatio=OUT_W/OUT_H;
+
+    // Dark stretched bg
+    const cs=Math.max(OUT_W/iw,OUT_H/ih);
+    ctx.drawImage(imgEl,(OUT_W-iw*cs)/2,(OUT_H-ih*cs)/2,iw*cs,ih*cs);
+    ctx.fillStyle='rgba(0,0,0,0.82)'; ctx.fillRect(0,0,OUT_W,OUT_H);
+
+    // Color tint
+    const {r,g,b}=getColor(imgEl);
+    const dk=(v,a)=>Math.max(0,v-a);
+    ctx.fillStyle=`rgba(${dk(r,30)},${dk(g,30)},${dk(b,30)},0.4)`;
+    ctx.fillRect(0,0,OUT_W,OUT_H);
+
+    // Smart fit
+    let finalW,finalH;
+    if (imgRatio>=screenRatio) {
+        const byW=OUT_W/imgRatio, minH=OUT_H*0.75;
+        if (byW<minH) {
+            finalH=minH; finalW=minH*imgRatio;
+            if(finalW>OUT_W*1.1){finalW=OUT_W*1.1;finalH=finalW/imgRatio;}
+        } else {finalW=OUT_W;finalH=byW;}
+    } else {
+        finalH=OUT_H; finalW=OUT_H*imgRatio;
+        if(finalW>OUT_W){finalW=OUT_W;finalH=OUT_W/imgRatio;}
+    }
+    const fx=(OUT_W-finalW)/2, fy=(OUT_H-finalH)/2;
+    ctx.drawImage(imgEl,fx,fy,finalW,finalH);
+
+    // Edge fades
+    if(fy>10){
+        const tf=ctx.createLinearGradient(0,fy-10,0,fy+finalH*0.12);
+        tf.addColorStop(0,'rgba(0,0,0,0.9)');tf.addColorStop(1,'transparent');
+        ctx.fillStyle=tf;ctx.fillRect(0,0,OUT_W,fy+finalH*0.12);
+        const bf=ctx.createLinearGradient(0,fy+finalH*0.88,0,OUT_H);
+        bf.addColorStop(0,'transparent');bf.addColorStop(1,'rgba(0,0,0,0.9)');
+        ctx.fillStyle=bf;ctx.fillRect(0,fy+finalH*0.88,OUT_W,OUT_H-(fy+finalH*0.88));
+    }
+    if(fx>10){
+        const lf=ctx.createLinearGradient(fx-10,0,fx+finalW*0.1,0);
+        lf.addColorStop(0,'rgba(0,0,0,0.9)');lf.addColorStop(1,'transparent');
+        ctx.fillStyle=lf;ctx.fillRect(0,0,fx+finalW*0.1,OUT_H);
+        const rf=ctx.createLinearGradient(fx+finalW*0.9,0,OUT_W,0);
+        rf.addColorStop(0,'transparent');rf.addColorStop(1,'rgba(0,0,0,0.9)');
+        ctx.fillStyle=rf;ctx.fillRect(fx+finalW*0.9,0,OUT_W-(fx+finalW*0.9),OUT_H);
+    }
+
+    // Vignette
+    const vig=ctx.createRadialGradient(OUT_W/2,OUT_H/2,OUT_H*0.2,OUT_W/2,OUT_H/2,OUT_H*0.72);
+    vig.addColorStop(0,'transparent');vig.addColorStop(1,'rgba(0,0,0,0.3)');
+    ctx.fillStyle=vig;ctx.fillRect(0,0,OUT_W,OUT_H);
+
+    return offscreen.toDataURL('image/jpeg',0.93);
+}
+
+function cleanMemory() {
+    currentObjectURLs.forEach(url=>URL.revokeObjectURL(url));
+    currentObjectURLs=[];
+}
+
+function initImages(sources) {
+    if(timer) clearTimeout(timer);
+    frame.innerHTML=''; slides=[]; index=0;
+    let loaded=0; const total=sources.length;
+    sources.forEach((src,i)=>{
+        const tmpImg=new Image();
+        tmpImg.crossOrigin='anonymous';
+        tmpImg.onload=()=>{
+            const dataUrl=convertTo916(tmpImg);
+            const slide=document.createElement('img');
+            slide.src=dataUrl;
+            slide.className='slide '+animClasses[i%animClasses.length];
+            frame.appendChild(slide);
+            slides[i]=slide;
+            loaded++;
+            if(loaded===total) run();
+        };
+        tmpImg.onerror=()=>{loaded++;if(loaded===total)run();};
+        tmpImg.src=src;
+    });
+}
+
+function run() {
+    if(!slides.length) return;
+    if(timer) clearTimeout(timer);
+    slides.forEach(s=>s.classList.remove('active'));
+    while(!slides[index]) index=(index+1)%slides.length;
+    slides[index].classList.add('active');
+    index=(index+1)%slides.length;
+    timer=setTimeout(run,1200);
+}
+
+initImages(demoImages);
+
+window.addEventListener('message',function(e){
+    if(!e.data) return;
+    let urls=null;
+    if(e.data.type==='REELFORGE_IMAGES'&&Array.isArray(e.data.images)) urls=e.data.images;
+    else if(Array.isArray(e.data.images)&&e.data.images.length) urls=e.data.images;
+    else if(Array.isArray(e.data)&&e.data.length) urls=e.data;
+    if(!urls||!urls.length) return;
+    cleanMemory();
+    initImages(urls);
+});
+</script>
+</body>
+</html>

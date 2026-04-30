@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Showcase Preview</title>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+
+        body {
+            margin: 0;
+            background: radial-gradient(circle, #222, #000);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            overflow: hidden;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        #frame {
+            width: 320px;
+            height: 580px;
+            position: relative;
+            overflow: hidden;
+            border: 8px solid #333;
+            border-radius: 40px;
+            background: #000;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.8), 0 0 20px rgba(0, 132, 255, 0.2);
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out, transform 0.8s ease;
+            filter: brightness(0.9);
+        }
+
+        .active {
+            opacity: 1;
+            z-index: 2;
+            transform: scale(1.02);
+        }
+
+        .pulse { animation: pulse 3s infinite ease-in-out; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+        .pan { animation: pan 10s infinite linear alternate; }
+        @keyframes pan { from { object-position: left center; } to { object-position: right center; } }
+    </style>
+</head>
+<body>
+
+<div id="frame">
+    <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=400&q=80" class="slide active pulse">
+    <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=400&q=80" class="slide pan">
+    <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=400&q=80" class="slide pulse">
+    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80" class="slide pan">
+</div>
+
+<script>
+    let slides = Array.from(document.querySelectorAll(".slide"));
+    let index = 0;
+    let timer;
+
+    function startSlideshow() {
+        if (timer) clearInterval(timer);
+        index = 0;
+        slides.forEach(s => s.classList.remove("active"));
+        slides[0].classList.add("active");
+
+        timer = setInterval(() => {
+            slides.forEach(s => s.classList.remove("active"));
+            index = (index + 1) % slides.length;
+            slides[index].classList.add("active");
+        }, 3000);
+    }
+
+    startSlideshow();
+
+    // ✅ postMessage injection — tem6 style
+    window.addEventListener('message', function(e) {
+        if (!e.data) return;
+
+        let urls = null;
+        if (e.data.type === 'REELFORGE_IMAGES') urls = e.data.images;
+        else if (Array.isArray(e.data.images)) urls = e.data.images;
+        else if (Array.isArray(e.data)) urls = e.data;
+
+        if (!urls || !urls.length) return;
+
+        const frame = document.getElementById('frame');
+
+        // Naye img elements banao uploaded images ke liye
+        frame.innerHTML = '';
+        slides = urls.map(function(url, i) {
+            const img = document.createElement('img');
+            img.src = url;
+            img.className = 'slide' + (i % 2 === 0 ? ' pulse' : ' pan');
+            img.style.objectFit = 'cover';
+            img.style.objectPosition = 'center center';
+            frame.appendChild(img);
+            return img;
+        });
+
+        startSlideshow();
+    });
+</script>
+
+</body>
+</html>

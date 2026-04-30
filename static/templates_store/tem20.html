@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>8 Image Cover</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#111;display:flex;justify-content:center;align-items:center}
+.slide{width:100%;height:100%;position:relative;overflow:hidden;background:#000}
+.slide img{width:100%;height:100%;object-fit:cover;position:absolute}
+.coverRight{animation:coverRight 1.2s forwards}
+@keyframes coverRight{0%{transform:translateX(-100%)}100%{transform:translateX(0)}}
+.coverLeft{animation:coverLeft 1.2s forwards}
+@keyframes coverLeft{0%{transform:translateX(100%)}100%{transform:translateX(0)}}
+.coverUp{animation:coverUp 1.2s forwards}
+@keyframes coverUp{0%{transform:translateY(100%)}100%{transform:translateY(0)}}
+.coverDown{animation:coverDown 1.2s forwards}
+@keyframes coverDown{0%{transform:translateY(-100%)}100%{transform:translateY(0)}}
+.exit{animation:fadeOut 0.5s forwards}
+@keyframes fadeOut{to{opacity:0}}
+</style>
+</head>
+<body>
+<div class="slide"><img id="img"></div>
+<script>
+let images=["https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1000","https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1000","https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1000","https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1000","https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1000","https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1000","https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1000","https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1000"];
+const effects=["coverRight","coverLeft","coverUp","coverDown"];
+const img=document.getElementById("img");
+let idx=0;
+function show(){
+  const eff=effects[idx%effects.length];
+  img.className="";img.src=images[idx%images.length];
+  img.classList.add(eff);
+  setTimeout(()=>{img.classList.remove(eff);img.classList.add("exit");},2800);
+  idx++;setTimeout(show,3500);
+}
+window.onload=show;
+window.addEventListener('message',function(e){
+  if(!e.data||e.data.type!=='REELFORGE_IMAGES')return;
+  if(!e.data.images||!e.data.images.length)return;
+  images=e.data.images;idx=0;
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinematic Photo Loop</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        .container { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        #display { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+        .img-slide {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0; z-index: 1;
+            transition: opacity 0.2s ease-in-out, transform 0.6s ease-out;
+            transform: scale(1.04);
+        }
+        .img-slide.active { opacity: 1; transform: scale(1); }
+        .vignette {
+            position: absolute; inset: 0; z-index: 2; pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.45) 100%);
+        }
+        .controls { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="display"></div>
+        <div class="vignette"></div>
+    </div>
+    <canvas id="offscreen" style="display:none"></canvas>
+    <script>
+        const display = document.getElementById('display');
+        const offscreen = document.getElementById('offscreen');
+        const ctx = offscreen.getContext('2d');
+        const OUT_W = 1080, OUT_H = 1920;
+        let imgElements = [], index = 0, timer;
+        let currentObjectURLs = [];
+
+        const demoImages = [
+            "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?q=80&w=800",
+            "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800",
+            "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?q=80&w=800",
+            "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?q=80&w=800",
+            "https://images.unsplash.com/photo-1583121274602-3e2820c69888?q=80&w=800",
+            "https://images.unsplash.com/photo-1502877338535-766e1452684a?q=80&w=800",
+            "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=800"
+        ];
+
+        function getColor(imgEl) {
+            let r=20, g=20, b=25;
+            try {
+                const tc = document.createElement('canvas'); tc.width=8; tc.height=8;
+                const tc2 = tc.getContext('2d');
+                tc2.drawImage(imgEl, 0,0,8,8);
+                const d = tc2.getImageData(0,0,8,8).data;
+                let rr=0,gg=0,bb=0,n=0;
+                for(let i=0;i<d.length;i+=4){rr+=d[i];gg+=d[i+1];bb+=d[i+2];n++;}
+                r=Math.floor(rr/n); g=Math.floor(gg/n); b=Math.floor(bb/n);
+            } catch(e){}
+            return {r,g,b};
+        }
+
+        function drawDarkBg(imgEl, color) {
+            // Step 1: stretched cover bg
+            const iw = imgEl.naturalWidth, ih = imgEl.naturalHeight;
+            const coverScale = Math.max(OUT_W/iw, OUT_H/ih);
+            const cw = iw*coverScale, ch = ih*coverScale;
+            ctx.drawImage(imgEl, (OUT_W-cw)/2, (OUT_H-ch)/2, cw, ch);
+            // Heavy dark overlay
+            ctx.fillStyle = 'rgba(0,0,0,0.82)';
+            ctx.fillRect(0,0,OUT_W,OUT_H);
+            // Subtle color tint
+            const {r,g,b} = color;
+            const dk = (v,a) => Math.max(0,v-a);
+            ctx.fillStyle = `rgba(${dk(r,30)},${dk(g,30)},${dk(b,30)},0.4)`;
+            ctx.fillRect(0,0,OUT_W,OUT_H);
+        }
+
+        function convertTo916(imgEl) {
+            offscreen.width = OUT_W;
+            offscreen.height = OUT_H;
+
+            const iw = imgEl.naturalWidth;
+            const ih = imgEl.naturalHeight;
+            const imgRatio = iw / ih;           // e.g. 1.77 = landscape, 0.75 = portrait
+            const screenRatio = OUT_W / OUT_H;  // 0.5625 = 9:16
+
+            const color = getColor(imgEl);
+            drawDarkBg(imgEl, color);
+
+            let finalW, finalH, fx, fy;
+
+            if (imgRatio >= screenRatio) {
+                // LANDSCAPE image (wider than 9:16) — fit full width, center vertically
+                // Zoom up so it fills at least 75% of screen height
+                const byWidth = { w: OUT_W, h: OUT_W / imgRatio };
+                const minH = OUT_H * 0.75;
+                if (byWidth.h < minH) {
+                    // scale up to fill 75% height
+                    finalH = minH;
+                    finalW = minH * imgRatio;
+                    // clamp width — allow slight overflow for zoom effect
+                    if (finalW > OUT_W * 1.1) {
+                        finalW = OUT_W * 1.1;
+                        finalH = finalW / imgRatio;
+                    }
+                } else {
+                    finalW = byWidth.w;
+                    finalH = byWidth.h;
+                }
+                fx = (OUT_W - finalW) / 2;
+                fy = (OUT_H - finalH) / 2;
+
+            } else {
+                // PORTRAIT image (taller than 9:16) — fit full height
+                finalH = OUT_H;
+                finalW = OUT_H * imgRatio;
+                if (finalW > OUT_W) { finalW = OUT_W; finalH = OUT_W / imgRatio; }
+                fx = (OUT_W - finalW) / 2;
+                fy = (OUT_H - finalH) / 2;
+            }
+
+            // Draw main image
+            ctx.drawImage(imgEl, fx, fy, finalW, finalH);
+
+            // Soft edge fades only where there's dark space
+            if (fy > 10) {
+                const topFade = ctx.createLinearGradient(0, fy-10, 0, fy + finalH*0.12);
+                topFade.addColorStop(0, 'rgba(0,0,0,0.9)');
+                topFade.addColorStop(1, 'transparent');
+                ctx.fillStyle = topFade;
+                ctx.fillRect(0, 0, OUT_W, fy + finalH*0.12);
+            }
+            if (OUT_H - (fy + finalH) > 10) {
+                const botFade = ctx.createLinearGradient(0, fy+finalH*0.88, 0, OUT_H);
+                botFade.addColorStop(0, 'transparent');
+                botFade.addColorStop(1, 'rgba(0,0,0,0.9)');
+                ctx.fillStyle = botFade;
+                ctx.fillRect(0, fy+finalH*0.88, OUT_W, OUT_H-(fy+finalH*0.88));
+            }
+            if (fx > 10) {
+                const leftFade = ctx.createLinearGradient(fx-10, 0, fx+finalW*0.1, 0);
+                leftFade.addColorStop(0, 'rgba(0,0,0,0.9)');
+                leftFade.addColorStop(1, 'transparent');
+                ctx.fillStyle = leftFade;
+                ctx.fillRect(0, 0, fx+finalW*0.1, OUT_H);
+
+                const rightFade = ctx.createLinearGradient(fx+finalW*0.9, 0, OUT_W, 0);
+                rightFade.addColorStop(0, 'transparent');
+                rightFade.addColorStop(1, 'rgba(0,0,0,0.9)');
+                ctx.fillStyle = rightFade;
+                ctx.fillRect(fx+finalW*0.9, 0, OUT_W-(fx+finalW*0.9), OUT_H);
+            }
+
+            // Final vignette
+            const vig = ctx.createRadialGradient(OUT_W/2,OUT_H/2,OUT_H*0.2,OUT_W/2,OUT_H/2,OUT_H*0.72);
+            vig.addColorStop(0,'transparent');
+            vig.addColorStop(1,'rgba(0,0,0,0.3)');
+            ctx.fillStyle=vig;
+            ctx.fillRect(0,0,OUT_W,OUT_H);
+
+            return offscreen.toDataURL('image/jpeg', 0.93);
+        }
+
+        function cleanMemory() {
+            currentObjectURLs.forEach(url => URL.revokeObjectURL(url));
+            currentObjectURLs = [];
+        }
+
+        function init(images) {
+            if (timer) clearTimeout(timer);
+            display.innerHTML = '';
+            imgElements = [];
+            index = 0;
+            let loaded = 0;
+            const total = images.length;
+            images.forEach((url, i) => {
+                const tmpImg = new Image();
+                tmpImg.crossOrigin = 'anonymous';
+                tmpImg.onload = () => {
+                    const dataUrl = convertTo916(tmpImg);
+                    const slide = document.createElement('img');
+                    slide.src = dataUrl;
+                    slide.className = 'img-slide';
+                    display.appendChild(slide);
+                    imgElements[i] = slide;
+                    loaded++;
+                    if (loaded === total) loop();
+                };
+                tmpImg.onerror = () => { loaded++; if (loaded === total) loop(); };
+                tmpImg.src = url;
+            });
+        }
+
+        function loop() {
+            const slides = imgElements.filter(Boolean);
+            if (!slides.length) return;
+            slides.forEach(el => el.classList.remove('active'));
+            while (!imgElements[index]) index = (index+1) % imgElements.length;
+            imgElements[index].classList.add('active');
+            let delay = (index===2||index===5||index===9) ? 1000 : 200;
+            index = (index+1) % imgElements.length;
+            timer = setTimeout(loop, delay);
+        }
+
+        init(demoImages);
+
+        window.addEventListener('message', function(e) {
+            if (!e.data || e.data.type !== 'REELFORGE_IMAGES') return;
+            var urls = e.data.images;
+            if (!urls || !urls.length) return;
+            cleanMemory();
+            init(urls);
+        });
+    </script>
+</body>
+</html>

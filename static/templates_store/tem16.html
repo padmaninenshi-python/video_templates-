@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fixed 15 PPT</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#111;display:flex;justify-content:center;align-items:center}
+.slide{width:100%;height:100%;position:relative;overflow:hidden;background:#000}
+.slide img{width:100%;height:100%;object-fit:cover;position:absolute}
+.fade{animation:fadeAnim 1s forwards}
+@keyframes fadeAnim{0%{opacity:0}100%{opacity:1}}
+.dissolve{animation:dissolveAnim 1s forwards}
+@keyframes dissolveAnim{0%{opacity:0;filter:blur(10px)}100%{opacity:1;filter:blur(0)}}
+.flash{animation:flashAnim 1s forwards}
+@keyframes flashAnim{0%{opacity:0;filter:brightness(3)}100%{opacity:1;filter:brightness(1)}}
+.newsflash{animation:newsflashAnim 1s forwards}
+@keyframes newsflashAnim{0%{transform:scale(4);opacity:0}100%{transform:scale(1);opacity:1}}
+.morph{animation:morphAnim 1s forwards}
+@keyframes morphAnim{0%{transform:scale(0.2);border-radius:50%;opacity:0}100%{transform:scale(1);border-radius:0;opacity:1}}
+.exit{animation:fadeOut 0.5s forwards}
+@keyframes fadeOut{to{opacity:0}}
+</style>
+</head>
+<body>
+<div class="slide"><img id="img"></div>
+<script>
+let images=["https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1000","https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1000","https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1000","https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1000","https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1000","https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1000","https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=1000","https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1000","https://images.unsplash.com/photo-1500534623283-312aade485b7?w=1000","https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1000"];
+const effects=["fade","dissolve","flash","newsflash","morph"];
+const img=document.getElementById("img");
+let idx=0;
+function show(){
+  const eff=effects[idx%effects.length];
+  img.className="";img.src=images[idx%images.length];
+  img.classList.add(eff);
+  setTimeout(()=>{img.classList.remove(eff);img.classList.add("exit");},2800);
+  idx++;setTimeout(show,3500);
+}
+window.onload=show;
+window.addEventListener('message',function(e){
+  if(!e.data||e.data.type!=='REELFORGE_IMAGES')return;
+  if(!e.data.images||!e.data.images.length)return;
+  images=e.data.images;idx=0;
+});
+</script>
+</body>
+</html>

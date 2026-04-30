@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Blur to Sharp Slideshow</title>
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#frame {
+    width: 360px;
+    height: 640px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #444;
+    flex-shrink: 0;
+}
+
+.slide {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    filter: blur(20px);
+    transform: scale(1.08);
+    transition: opacity 0.8s ease, filter 1.2s ease, transform 1.2s ease;
+    z-index: 1;
+}
+
+/* Active slide: blur hata ke sharp ho jao */
+.slide.active {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
+    z-index: 2;
+}
+
+/* Leaving slide: phir se blur ho jao */
+.slide.leaving {
+    opacity: 0;
+    filter: blur(20px);
+    transform: scale(1.08);
+    z-index: 1;
+}
+</style>
+</head>
+
+<body>
+
+<div id="frame">
+    <img src="https://picsum.photos/id/1011/400/700" class="slide active">
+    <img src="https://picsum.photos/id/1015/400/700" class="slide">
+    <img src="https://picsum.photos/id/1016/400/700" class="slide">
+    <img src="https://picsum.photos/id/1020/400/700" class="slide">
+    <img src="https://picsum.photos/id/1024/400/700" class="slide">
+</div>
+
+<script>
+const slides = document.querySelectorAll(".slide");
+let index = 0;
+
+function run() {
+    // Current active → leaving
+    slides.forEach(s => {
+        if (s.classList.contains('active')) {
+            s.classList.remove('active');
+            s.classList.add('leaving');
+            setTimeout(() => s.classList.remove('leaving'), 1200);
+        }
+    });
+
+    // Next slide → active (blur to sharp)
+    slides[index].classList.add('active');
+    index = (index + 1) % slides.length;
+
+    setTimeout(run, 2500);
+}
+
+run();
+
+// ReelForge postMessage — left panel se images
+window.addEventListener('message', function(e) {
+    if (!e.data) return;
+
+    var urls = null;
+
+    if (e.data.type === 'REELFORGE_IMAGES' && Array.isArray(e.data.images)) {
+        urls = e.data.images;
+    } else if (Array.isArray(e.data.images) && e.data.images.length) {
+        urls = e.data.images;
+    } else if (Array.isArray(e.data) && e.data.length) {
+        urls = e.data;
+    }
+
+    if (!urls || !urls.length) return;
+
+    // Seedha .slide img src replace karo
+    slides.forEach(function(slide, i) {
+        slide.src = urls[i % urls.length];
+    });
+});
+</script>
+
+</body>
+</html>

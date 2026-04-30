@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Clean Split Slideshow</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Arial;
+}
+.slide {
+    width: 350px;
+    height: 620px;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid #fff;
+    border-radius: 12px;
+    background: black;
+    box-shadow: 0 0 40px rgba(255,255,255,0.08);
+}
+.slide img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0; left: 0;
+}
+.split-h { animation: splitH 0.8s forwards; }
+@keyframes splitH {
+    from { clip-path: inset(50% 0 50% 0); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+.split-v { animation: splitV 0.8s forwards; }
+@keyframes splitV {
+    from { clip-path: inset(0 50% 0 50%); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+.split-4 { animation: split4 1s forwards; }
+@keyframes split4 {
+    from { clip-path: inset(30% 30% 30% 30%); }
+    to   { clip-path: inset(0 0 0 0); }
+}
+.exit { animation: fadeOut 0.5s forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+.controls { display: none !important; }
+</style>
+</head>
+<body>
+<div class="slide">
+    <img id="img" src="">
+</div>
+<script>
+let images = [
+    "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1000",
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1000",
+    "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1000",
+    "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1000",
+    "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1000"
+];
+const splits = ["split-h","split-v","split-4","split-h","split-v"];
+const img = document.getElementById("img");
+let idx = 0;
+
+function showSlide() {
+    const effect = splits[idx % splits.length];
+    img.className = "";
+    img.src = images[idx % images.length];
+    img.classList.add(effect);
+    setTimeout(() => {
+        img.classList.remove(effect);
+        img.classList.add("exit");
+    }, 3000);
+    idx++;
+    setTimeout(showSlide, 4000);
+}
+window.onload = showSlide;
+
+window.addEventListener('message', function(e) {
+    if (!e.data || e.data.type !== 'REELFORGE_IMAGES') return;
+    if (!e.data.images || !e.data.images.length) return;
+    images = e.data.images;
+    idx = 0;
+});
+</script>
+</body>
+</html>
