@@ -1,0 +1,188 @@
+{
+  "templates": [
+    {
+      "id": "tem1",
+      "file": "tem1.html",
+      "name": "Auto Velocity",
+      "thumbnail": "/static/thumbnails/tem1.jpg",
+      "category": "Motion",
+      "active": true
+    },
+    {
+      "id": "tem2",
+      "file": "tem2.html",
+      "name": "Cinematic Loop",
+      "thumbnail": "/static/thumbnails/tem2.jpg",
+      "category": "Cinematic",
+      "active": true
+    },
+    {
+      "id": "tem3",
+      "file": "tem3.html",
+      "name": "Clickable Fade",
+      "thumbnail": "/static/thumbnails/tem3.jpg",
+      "category": "Creative",
+      "active": true
+    },
+    {
+      "id": "tem4",
+      "file": "tem4.html",
+      "name": "Pixel Flash",
+      "thumbnail": "/static/thumbnails/tem4.jpg",
+      "category": "Creative",
+      "active": true
+    },
+    {
+      "id": "tem5",
+      "file": "tem5.html",
+      "name": "Full Fill Slide",
+      "thumbnail": "/static/thumbnails/tem5.jpg",
+      "category": "Cinematic",
+      "active": true
+    },
+    {
+      "id": "tem6",
+      "file": "tem6.html",
+      "name": "PPT Exit",
+      "thumbnail": "/static/thumbnails/tem6.jpg",
+      "category": "PPT Style",
+      "active": true
+    },
+    {
+      "id": "tem7",
+      "file": "tem7.html",
+      "name": "Dynamic Motion",
+      "thumbnail": "/static/thumbnails/tem7.jpg",
+      "category": "Motion",
+      "active": true
+    },
+    {
+      "id": "tem8",
+      "file": "tem8.html",
+      "name": "Wipe Motion",
+      "thumbnail": "/static/thumbnails/tem8.jpg",
+      "category": "Motion",
+      "active": true
+    },
+    {
+      "id": "tem9",
+      "file": "tem9.html",
+      "name": "Clean Split",
+      "thumbnail": "/static/thumbnails/tem9.jpg",
+      "category": "Cinematic",
+      "active": true
+    },
+    {
+      "id": "tem10",
+      "file": "tem10.html",
+      "name": "Curtain Show",
+      "thumbnail": "/static/thumbnails/tem10.jpg",
+      "category": "Creative",
+      "active": true
+    },
+    {
+      "id": "tem11",
+      "file": "tem11.html",
+      "name": "Blinds Effect",
+      "thumbnail": "/static/thumbnails/tem11.jpg",
+      "category": "Creative",
+      "active": true
+    },
+    {
+      "id": "tem12",
+      "file": "tem12.html",
+      "name": "Fixed Box",
+      "thumbnail": "/static/thumbnails/tem12.jpg",
+      "category": "Creative",
+      "active": true
+    },
+    {
+      "id": "tem13",
+      "file": "tem13.html",
+      "name": "Rotate FX",
+      "thumbnail": "/static/thumbnails/tem13.jpg",
+      "category": "Motion",
+      "active": true
+    },
+    {
+      "id": "tem14",
+      "file": "tem14.html",
+      "name": "Advanced PPT",
+      "thumbnail": "/static/thumbnails/tem14.jpg",
+      "category": "PPT Style",
+      "active": true
+    },
+    {
+      "id": "tem15",
+      "file": "tem15.html",
+      "name": "Diamond Show",
+      "thumbnail": "/static/thumbnails/tem15.jpg",
+      "category": "Cinematic",
+      "active": true
+    },
+    {
+      "id": "tem16",
+      "file": "tem16.html",
+      "name": "Fixed 15 PPT",
+      "thumbnail": "/static/thumbnails/tem16.jpg",
+      "category": "PPT Style",
+      "active": true
+    },
+    {
+      "id": "tem17",
+      "file": "tem17.html",
+      "name": "5 Image Dynamic",
+      "thumbnail": "/static/thumbnails/tem17.jpg",
+      "category": "PPT Style",
+      "active": true
+    },
+    {
+      "id": "tem18",
+      "file": "tem18.html",
+      "name": "7 Image Dynamic",
+      "thumbnail": "/static/thumbnails/tem18.jpg",
+      "category": "PPT Style",
+      "active": true
+    },
+    {
+      "id": "tem19",
+      "file": "tem19.html",
+      "name": "8 Image Push",
+      "thumbnail": "/static/thumbnails/tem19.jpg",
+      "category": "PPT Style",
+      "active": true
+    },
+    {
+      "id": "tem20",
+      "file": "tem20.html",
+      "name": "8 Image Cover",
+      "thumbnail": "/static/thumbnails/tem20.jpg",
+      "category": "PPT Style",
+      "active": true
+    },
+    {
+      "id": "tem21",
+      "file": "tem21.html",
+      "name": "9 Image FX",
+      "thumbnail": "/static/thumbnails/tem21.jpg",
+      "category": "PPT Style",
+      "active": true
+    }
+  ],
+  "music": [
+    {
+      "id": "ceff8120",
+      "name": "Jhoome_Jo_Pathaan",
+      "url": "/static/music/73464129_Jhoome_Jo_Pathaan_Song___Shah_Rukh_Khan_Deepika___Vishal___Sheykhar_Arijit_Singh_Sukriti_Kumaar128k.m4a",
+      "duration": "\u2014",
+      "start": 130,
+      "end": 150
+    }
+  ],
+  "projects": [],
+  "settings": {
+    "app_name": "Caryanams",
+    "admin_username": "admin",
+    "admin_password": "admin123"
+  }
+}
