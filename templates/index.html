@@ -153,6 +153,7 @@ body {
   background: var(--surface2); position: relative;
 }
 .template-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.template-card:active { transform: scale(0.97); border-color: var(--accent); }
 .template-card.selected { border-color: var(--accent); box-shadow: var(--glow); }
 
 .template-preview {
@@ -576,15 +577,20 @@ body {
 /* ── MOBILE CANVAS PREVIEW ──────────────────────────────────── */
 .mobile-preview-strip {
   display: none;
+  position: fixed;
+  top: 100px; /* header(56) + stepbar(44) */
+  left: 0; right: 0;
+  height: 70px;
   background: #0f0f2a;
-  padding: 10px 16px;
+  padding: 0 14px;
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid rgba(109,74,252,0.2);
+  z-index: 480;
 }
 .mob-mini-reel {
-  width: 48px; height: 86px;
-  border-radius: 8px; overflow: hidden;
+  width: 39px; height: 56px;
+  border-radius: 6px; overflow: hidden;
   border: 1px solid rgba(109,74,252,0.4);
   flex-shrink: 0; background: #000;
 }
@@ -627,8 +633,8 @@ body {
 /* ── MOBILE NEXT BUTTON ─────────────────────────────────────── */
 .mobile-next-btn {
   display: none;
-  position: fixed; bottom: 72px; right: 16px;
-  z-index: 480;
+  position: fixed; bottom: 76px; right: 16px;
+  z-index: 470;
 }
 .mob-fab {
   width: 52px; height: 52px; border-radius: 50%;
@@ -670,11 +676,11 @@ body {
   /* Main layout becomes vertical column */
   .main-layout {
     flex-direction: column;
-    margin-top: 100px;   /* header + step bar */
+    margin-top: 170px;   /* header(56) + stepbar(44) + preview-strip(70) */
     margin-bottom: 72px; /* bottom nav */
     overflow: visible;
     height: auto;
-    min-height: calc(100dvh - 172px);
+    min-height: calc(100dvh - 242px);
   }
 
   /* Sidebar takes full width, stacked */
@@ -687,7 +693,7 @@ body {
   }
 
   .sidebar-section { height: auto; overflow: visible; }
-  .sidebar-body { overflow: visible; padding: 12px; }
+  .sidebar-body { overflow: visible; padding: 12px; min-height: 200px; }
   .sidebar-header { padding: 12px 16px 10px; }
   .sidebar-header h3 { font-size: 14px; }
 
@@ -809,7 +815,7 @@ body {
 
 /* ── LANDSCAPE PHONE ───────────────────────────────────────── */
 @media (max-width: 768px) and (orientation: landscape) {
-  .main-layout { margin-top: 56px; } /* only header, no step bar */
+  .main-layout { margin-top: 56px; } /* landscape: only header */
   .mobile-step-bar { display: none; }
   .mobile-preview-strip { display: none; }
   .sidebar-body { max-height: 60vh; overflow-y: auto; }
@@ -822,7 +828,7 @@ body {
     height: calc(64px + env(safe-area-inset-bottom));
   }
   @media (max-width: 768px) {
-    .main-layout { margin-bottom: calc(72px + env(safe-area-inset-bottom)); }
+    .main-layout { margin-bottom: calc(72px + env(safe-area-inset-bottom)); margin-top: 170px; }
     .toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
     .mobile-next-btn { bottom: calc(80px + env(safe-area-inset-bottom)); }
     #exportSheet .exportSheetInner { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
