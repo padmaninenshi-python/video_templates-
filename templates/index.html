@@ -477,9 +477,464 @@ body {
   0%, 100% { transform: scaleY(.25); opacity:.4; }
   50%       { transform: scaleY(1);   opacity:1; }
 }
+
+/* ── MOBILE RESPONSIVE ─────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE OVERHAUL — Caryanams Reel Generator
+   Target: phones 320px–768px, tablets 768px–1024px
+═══════════════════════════════════════════════════════════════ */
+
+/* ── MOBILE BOTTOM NAV BAR ──────────────────────────────────── */
+.mobile-bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 500;
+  padding: 0 4px;
+  align-items: center;
+  justify-content: space-around;
+  box-shadow: 0 -4px 20px rgba(109,74,252,0.12);
+}
+.mob-nav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 8px 12px; border-radius: 10px; border: none;
+  background: transparent; color: var(--muted);
+  font-size: 10px; font-weight: 600; cursor: pointer;
+  transition: all .2s; flex: 1; min-width: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+.mob-nav-btn i { font-size: 18px; transition: all .2s; }
+.mob-nav-btn.active { color: var(--accent); background: rgba(109,74,252,0.1); }
+.mob-nav-btn.active i { transform: translateY(-2px); }
+.mob-nav-btn .mob-step-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); display: none; margin-top: 2px;
+}
+.mob-nav-btn.done .mob-step-dot { display: block; background: #22c55e; }
+
+/* ── MOBILE HEADER ──────────────────────────────────────────── */
+.mobile-header {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 56px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 500;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+}
+.mobile-header .mob-logo { height: 36px; width: auto; object-fit: contain; }
+.mobile-header .mob-title {
+  font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  flex: 1;
+}
+.mobile-header .mob-export-btn {
+  padding: 8px 14px; border-radius: 8px; border: none;
+  background: var(--accent); color: white;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+  white-space: nowrap;
+}
+
+/* ── MOBILE STEP INDICATOR ─────────────────────────────────── */
+.mobile-step-bar {
+  display: none;
+  position: fixed; top: 56px; left: 0; right: 0;
+  height: 44px; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 490;
+  align-items: center;
+  padding: 0 12px;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mobile-step-bar::-webkit-scrollbar { display: none; }
+.mob-step-pill {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  white-space: nowrap; cursor: pointer; flex-shrink: 0;
+  transition: all .2s; border: none; background: transparent;
+}
+.mob-step-pill.active {
+  background: var(--accent); color: white;
+  box-shadow: 0 2px 10px rgba(109,74,252,0.35);
+}
+.mob-step-pill .pill-num {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+}
+
+/* ── MOBILE CANVAS PREVIEW ──────────────────────────────────── */
+.mobile-preview-strip {
+  display: none;
+  background: #0f0f2a;
+  padding: 10px 16px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(109,74,252,0.2);
+}
+.mob-mini-reel {
+  width: 48px; height: 86px;
+  border-radius: 8px; overflow: hidden;
+  border: 1px solid rgba(109,74,252,0.4);
+  flex-shrink: 0; background: #000;
+}
+.mob-mini-reel iframe { width: 100%; height: 100%; border: none; pointer-events: none; }
+.mob-mini-reel .mob-mini-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: rgba(255,255,255,0.3);
+}
+.mob-preview-info { flex: 1; }
+.mob-preview-title { font-size: 13px; font-weight: 600; color: white; }
+.mob-preview-sub { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.mob-preview-expand {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: rgba(255,255,255,0.1); border: none; color: rgba(255,255,255,0.7);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; cursor: pointer;
+}
+
+/* ── MOBILE FULL PREVIEW MODAL ──────────────────────────────── */
+.mob-preview-modal {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.95); z-index: 2000;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px;
+}
+.mob-preview-modal.open { display: flex; }
+.mob-preview-modal .mob-reel-big {
+  width: 260px; height: 462px; border-radius: 18px; overflow: hidden;
+  box-shadow: 0 0 60px rgba(109,74,252,0.4);
+}
+.mob-preview-modal iframe { width: 100%; height: 100%; border: none; }
+.mob-preview-modal .mob-close-preview {
+  position: absolute; top: 20px; right: 20px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255,255,255,0.15); border: none;
+  color: white; font-size: 16px; cursor: pointer;
+}
+
+/* ── MOBILE NEXT BUTTON ─────────────────────────────────────── */
+.mobile-next-btn {
+  display: none;
+  position: fixed; bottom: 72px; right: 16px;
+  z-index: 480;
+}
+.mob-fab {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; color: white; font-size: 18px;
+  box-shadow: 0 4px 20px rgba(109,74,252,0.5);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: transform .2s;
+}
+.mob-fab:active { transform: scale(0.93); }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+═══════════════════════════════════════════════════════════════ */
+
+/* ── TABLET (768px–1024px) ──────────────────────────────────── */
+@media (max-width: 1024px) {
+  :root { --sidebar-w: 260px; --panel-w: 280px; }
+  .canvas-area { padding: 20px; }
+  .reel-frame { width: 220px; height: 391px; }
+}
+
+/* ── SMALL TABLET / LARGE PHONE (600px–768px) ───────────────── */
+@media (max-width: 768px) {
+  :root { --sidebar-w: 100%; --panel-w: 100%; }
+
+  html, body { overflow: auto; height: auto; }
+
+  /* Hide desktop nav completely */
+  .navbar { display: none !important; }
+
+  /* Show mobile header */
+  .mobile-header { display: flex; }
+  .mobile-step-bar { display: flex; }
+  .mobile-bottom-nav { display: flex; }
+  .mobile-preview-strip { display: flex; }
+  .mobile-next-btn { display: block; }
+
+  /* Main layout becomes vertical column */
+  .main-layout {
+    flex-direction: column;
+    margin-top: 100px;   /* header + step bar */
+    margin-bottom: 72px; /* bottom nav */
+    overflow: visible;
+    height: auto;
+    min-height: calc(100dvh - 172px);
+  }
+
+  /* Sidebar takes full width, stacked */
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    height: auto;
+    overflow: visible;
+  }
+
+  .sidebar-section { height: auto; overflow: visible; }
+  .sidebar-body { overflow: visible; padding: 12px; }
+  .sidebar-header { padding: 12px 16px 10px; }
+  .sidebar-header h3 { font-size: 14px; }
+
+  /* Canvas area hidden on mobile (preview strip shows mini version) */
+  .canvas-area { display: none !important; }
+
+  /* Right panel hidden on mobile */
+  .right-panel { display: none !important; }
+
+  /* Template grid — 2 columns on phone, 3 on tablet */
+  .template-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Template filter — horizontal scroll */
+  .template-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    gap: 6px;
+  }
+  .template-filter::-webkit-scrollbar { display: none; }
+  .filter-btn { flex-shrink: 0; font-size: 11px; padding: 4px 10px; }
+
+  /* Image grid — 3 columns */
+  .image-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+
+  /* Drop zone — more compact */
+  .drop-zone { padding: 20px 16px; }
+  .drop-zone .dz-icon { font-size: 24px; margin-bottom: 6px; }
+
+  /* Form inputs — larger touch targets */
+  .form-input, .form-select, .form-textarea {
+    padding: 11px 14px; font-size: 14px; border-radius: 10px;
+  }
+  .form-label { font-size: 13px; margin-bottom: 8px; }
+  .form-group { margin-bottom: 16px; }
+
+  /* Music items */
+  .music-item { padding: 10px 12px; }
+  .music-icon { width: 34px; height: 34px; font-size: 14px; }
+  .music-name { font-size: 12px; }
+
+  /* Buttons — full width on mobile */
+  .btn { padding: 10px 18px; font-size: 14px; }
+
+  /* Color swatches — bigger touch targets */
+  .color-swatch { width: 38px; height: 38px; border-radius: 8px; }
+
+  /* Export sheet stays full width */
+  #exportSheetInner { max-width: 100%; }
+
+  /* Toast — center bottom */
+  .toast { right: 16px; bottom: 80px; left: 16px; max-width: none;
+    transform: translateY(120px); }
+  .toast.show { transform: translateY(0); }
+
+  /* Voice module adjustments */
+  #voiceTypeGrid { grid-template-columns: 1fr 1fr; }
+
+  /* Range sliders — bigger */
+  .form-range { height: 6px; }
+
+  /* Music tab buttons */
+  #mtab-builtin, #mtab-custom { font-size: 12px; padding: 8px 0; }
+
+  /* Rec visualizer */
+  #recVisualizer { height: 40px; }
+}
+
+/* ── PHONE (max 480px) ──────────────────────────────────────── */
+@media (max-width: 480px) {
+  .mobile-header { padding: 0 12px; gap: 8px; }
+  .mobile-header .mob-logo { height: 30px; }
+  .mobile-header .mob-title { font-size: 15px; }
+  .mobile-header .mob-export-btn { padding: 7px 12px; font-size: 11px; }
+
+  .mob-step-pill { font-size: 11px; padding: 5px 10px; }
+
+  .template-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  /* Sidebar sections — full width scrollable */
+  .sidebar-body { padding: 10px; }
+  .sidebar-header { padding: 10px 14px 8px; }
+  .sidebar-header h3 { font-size: 13px; }
+  .sidebar-header p { font-size: 11px; }
+
+  /* Format grid — 2 cols */
+  .format-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  /* Share grid — 2 cols */
+  .share-grid { grid-template-columns: 1fr 1fr; }
+
+  /* Bottom nav labels smaller */
+  .mob-nav-btn { font-size: 9px; padding: 6px 8px; }
+  .mob-nav-btn i { font-size: 16px; }
+
+  /* Form inputs */
+  .form-input, .form-select, .form-textarea { font-size: 15px; }
+
+  /* Music list */
+  .music-list { gap: 6px; }
+
+  /* Voice waveform */
+  #voiceWaveform { height: 28px; }
+
+  /* Export sheet */
+  .es-label { font-size: 14px; }
+  .es-value { font-size: 15px; }
+}
+
+/* ── VERY SMALL PHONES (max 360px) ─────────────────────────── */
+@media (max-width: 360px) {
+  .mob-step-pill span { display: none; } /* hide label, show only number */
+  .mob-step-pill { padding: 5px 8px; }
+  .template-grid { gap: 5px; }
+  .image-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .mob-nav-btn { font-size: 8px; gap: 2px; }
+}
+
+/* ── LANDSCAPE PHONE ───────────────────────────────────────── */
+@media (max-width: 768px) and (orientation: landscape) {
+  .main-layout { margin-top: 56px; } /* only header, no step bar */
+  .mobile-step-bar { display: none; }
+  .mobile-preview-strip { display: none; }
+  .sidebar-body { max-height: 60vh; overflow-y: auto; }
+}
+
+/* ── SAFE AREA (notch/home bar) ─────────────────────────────── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+    height: calc(64px + env(safe-area-inset-bottom));
+  }
+  @media (max-width: 768px) {
+    .main-layout { margin-bottom: calc(72px + env(safe-area-inset-bottom)); }
+    .toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
+    .mobile-next-btn { bottom: calc(80px + env(safe-area-inset-bottom)); }
+    #exportSheet .exportSheetInner { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+  }
+}
+
+/* ── PREVENT iOS double-tap zoom ─────────────────────────────── */
+@media (max-width: 768px) {
+  button, input, select, textarea { touch-action: manipulation; }
+}
+
+/* ── SMOOTH TRANSITIONS for panel switching ─────────────────── */
+@media (max-width: 768px) {
+  .sidebar-section {
+    animation: fadeInUp .25s ease;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
 </style>
 </head>
 <body>
+
+<!-- ══ MOBILE HEADER ══════════════════════════════════════════ -->
+<header class="mobile-header">
+  <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='20' fill='%236d4afc'/%3E%3Ctext x='20' y='26' text-anchor='middle' font-size='18' fill='white'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E" alt="Logo" class="mob-logo">
+  <span class="mob-title">Caryanams</span>
+  <button class="mob-export-btn" onclick="exportReel()"><i class="fas fa-download"></i> Export</button>
+</header>
+
+<!-- ══ MOBILE STEP BAR ════════════════════════════════════════ -->
+<div class="mobile-step-bar" id="mobileStepBar">
+  <button class="mob-step-pill active" data-step="1" onclick="goStep(1)">
+    <span class="pill-num">1</span><span>Templates</span>
+  </button>
+  <button class="mob-step-pill" data-step="2" onclick="goStep(2)">
+    <span class="pill-num">2</span><span>Media</span>
+  </button>
+  <button class="mob-step-pill" data-step="3" onclick="goStep(3)">
+    <span class="pill-num">3</span><span>Text</span>
+  </button>
+  <button class="mob-step-pill" data-step="4" onclick="goStep(4)">
+    <span class="pill-num">4</span><span>Music</span>
+  </button>
+  <button class="mob-step-pill" data-step="5" onclick="goStep(5)">
+    <span class="pill-num">5</span><span>Voice</span>
+  </button>
+</div>
+
+<!-- ══ MOBILE PREVIEW STRIP ══════════════════════════════════ -->
+<div class="mobile-preview-strip" id="mobilePreviewStrip">
+  <div class="mob-mini-reel" id="mobMiniReel">
+    <div class="mob-mini-placeholder" id="mobMiniPlaceholder"><i class="fas fa-film"></i></div>
+    <iframe id="mobMiniIframe" style="display:none" allowfullscreen></iframe>
+  </div>
+  <div class="mob-preview-info">
+    <div class="mob-preview-title" id="mobPreviewTitle">No template selected</div>
+    <div class="mob-preview-sub" id="mobPreviewSub">Pick a template to start →</div>
+  </div>
+  <button class="mob-preview-expand" onclick="openMobPreview()">
+    <i class="fas fa-expand"></i>
+  </button>
+</div>
+
+<!-- ══ MOBILE FULL PREVIEW MODAL ══════════════════════════════ -->
+<div class="mob-preview-modal" id="mobPreviewModal">
+  <button class="mob-close-preview" onclick="closeMobPreview()"><i class="fas fa-times"></i></button>
+  <div class="mob-reel-big">
+    <iframe id="mobBigIframe" allowfullscreen style="width:100%;height:100%;border:none"></iframe>
+  </div>
+  <div style="color:rgba(255,255,255,0.6);font-size:12px;text-align:center;margin-top:8px;">9:16 Full Preview</div>
+</div>
+
+<!-- ══ MOBILE BOTTOM NAV ═══════════════════════════════════════ -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+  <button class="mob-nav-btn active" data-step="1" onclick="goStep(1)">
+    <i class="fas fa-film"></i>
+    Templates
+    <span class="mob-step-dot"></span>
+  </button>
+  <button class="mob-nav-btn" data-step="2" onclick="goStep(2)">
+    <i class="fas fa-images"></i>
+    Media
+    <span class="mob-step-dot"></span>
+  </button>
+  <button class="mob-nav-btn" data-step="3" onclick="goStep(3)">
+    <i class="fas fa-font"></i>
+    Text
+    <span class="mob-step-dot"></span>
+  </button>
+  <button class="mob-nav-btn" data-step="4" onclick="goStep(4)">
+    <i class="fas fa-music"></i>
+    Music
+    <span class="mob-step-dot"></span>
+  </button>
+  <button class="mob-nav-btn" data-step="5" onclick="goStep(5)">
+    <i class="fas fa-microphone"></i>
+    Voice
+    <span class="mob-step-dot"></span>
+  </button>
+</nav>
+
+<!-- ══ MOBILE FAB NEXT BUTTON ════════════════════════════════ -->
+<div class="mobile-next-btn">
+  <button class="mob-fab" onclick="mobNextStep()" title="Next Step">
+    <i class="fas fa-arrow-right" id="mobFabIcon"></i>
+  </button>
+</div>
+
 
 <!-- ── NAVBAR ──────────────────────────────────────────────── -->
 <nav class="navbar">
@@ -1415,7 +1870,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   checkPendingTemplate();
   loadBuiltinMusic();
   setupDragDrop();
-});
+
+  // ── Mobile init ──────────────────────────────────────────────
+  updateMobileNav(1);
+  updateMobFab(1);
+  // Watch iframe src changes to sync mini preview
+  const _reelIframeObs = new MutationObserver(updateMobilePreviewStrip);
+  const _ri = document.getElementById('reelIframe');
+  if (_ri) _reelIframeObs.observe(_ri, { attributes: true, attributeFilter: ['src'] });
+};
 
 // ── STEP NAVIGATION ─────────────────────────────────────────────
 function goStep(n) {
@@ -4043,6 +4506,134 @@ function removeRecording() {
 // ── END RECORDING MODULE ──────────────────────────────────────────
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ═══════════════════════════════════════════════════════════════
+// MOBILE RESPONSIVE JS
+// ═══════════════════════════════════════════════════════════════
+
+function isMobile() { return window.innerWidth <= 768; }
+
+// ── Override goStep to sync mobile UI ───────────────────────────
+const _origGoStep = goStep;
+window.goStep = function(n) {
+  _origGoStep(n);
+  updateMobileNav(n);
+  updateMobilePreviewStrip();
+  // Scroll sidebar body to top smoothly
+  const body = document.querySelector('.sidebar-body');
+  if (body) body.scrollTop = 0;
+  // Scroll active pill into view
+  const bar = document.getElementById('mobileStepBar');
+  if (bar) {
+    const activePill = bar.querySelector('.mob-step-pill.active');
+    if (activePill) activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+  updateMobFab(n);
+};
+
+// ── Override updateSummary to also refresh mobile strip ──────────
+const _origUpdateSummary = updateSummary;
+window.updateSummary = function() {
+  _origUpdateSummary();
+  updateMobilePreviewStrip();
+};
+
+function updateMobileNav(n) {
+  document.querySelectorAll('.mob-step-pill').forEach(p =>
+    p.classList.toggle('active', +p.dataset.step === n));
+  document.querySelectorAll('.mob-nav-btn').forEach(b =>
+    b.classList.toggle('active', +b.dataset.step === n));
+}
+
+function updateMobFab(n) {
+  const icon = document.getElementById('mobFabIcon');
+  if (!icon) return;
+  icon.className = n >= 5 ? 'fas fa-download' : 'fas fa-arrow-right';
+}
+
+function mobNextStep() {
+  if (currentStep >= 5) { exportReel(); }
+  else { goStep(currentStep + 1); }
+}
+
+function markMobStepDone(n) {
+  const btn = document.querySelector('.mob-nav-btn[data-step="' + n + '"]');
+  if (btn) btn.classList.add('done');
+}
+
+function updateMobilePreviewStrip() {
+  const t = typeof state !== 'undefined' ? state.selectedTemplate : null;
+  const titleEl = document.getElementById('mobPreviewTitle');
+  const subEl   = document.getElementById('mobPreviewSub');
+  const miniIframe = document.getElementById('mobMiniIframe');
+  const miniPh     = document.getElementById('mobMiniPlaceholder');
+
+  if (t) {
+    if (titleEl) titleEl.textContent = t.name || 'Template Selected';
+    if (subEl) {
+      const imgCount = typeof state !== 'undefined' ? state.images.length : 0;
+      const hasMus   = typeof state !== 'undefined' && state.music;
+      subEl.textContent = (imgCount > 0 ? imgCount + ' images · ' : '') +
+                          (hasMus ? '🎵 Music · ' : '') + 'Step ' + currentStep + '/5';
+    }
+    if (miniIframe && miniPh) {
+      const mainIframe = document.getElementById('reelIframe');
+      if (mainIframe && mainIframe.src && mainIframe.src !== window.location.href) {
+        if (miniIframe.src !== mainIframe.src) miniIframe.src = mainIframe.src;
+        miniIframe.style.display = 'block';
+        miniPh.style.display = 'none';
+      }
+    }
+    markMobStepDone(1);
+  } else {
+    if (titleEl) titleEl.textContent = 'No template selected';
+    if (subEl) subEl.textContent = 'Pick a template to start →';
+  }
+  if (typeof state !== 'undefined' && state.images.length > 0) markMobStepDone(2);
+  const txt = document.getElementById('textTitle');
+  if (txt && txt.value.trim()) markMobStepDone(3);
+  if (typeof state !== 'undefined' && state.music) markMobStepDone(4);
+  if (typeof state !== 'undefined' && state.voice) markMobStepDone(5);
+}
+
+// ── Mobile full preview modal ────────────────────────────────────
+function openMobPreview() {
+  const modal = document.getElementById('mobPreviewModal');
+  const bigIframe = document.getElementById('mobBigIframe');
+  const mainIframe = document.getElementById('reelIframe');
+  if (mainIframe && mainIframe.src && mainIframe.src !== window.location.href) {
+    bigIframe.src = mainIframe.src;
+  }
+  if (modal) { modal.classList.add('open'); document.body.style.overflow = 'hidden'; }
+}
+function closeMobPreview() {
+  const modal = document.getElementById('mobPreviewModal');
+  if (modal) { modal.classList.remove('open'); document.body.style.overflow = ''; }
+}
+
+// ── Touch swipe to switch steps ──────────────────────────────────
+(function setupSwipe() {
+  let startX = 0, startY = 0, isDragging = false;
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  sidebar.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isDragging = true;
+  }, { passive: true });
+  sidebar.addEventListener('touchend', function(e) {
+    if (!isDragging || !isMobile()) return;
+    isDragging = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (Math.abs(dx) > 65 && Math.abs(dy) < 50) {
+      if (dx < 0 && currentStep < 5) goStep(currentStep + 1);
+      else if (dx > 0 && currentStep > 1) goStep(currentStep - 1);
+    }
+  }, { passive: true });
+  sidebar.addEventListener('touchcancel', function() { isDragging = false; }, { passive: true });
+})();
+
 </script>
 </body>
 </html>
