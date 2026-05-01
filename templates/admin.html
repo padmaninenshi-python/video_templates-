@@ -222,7 +222,11 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
           <div class="stat-value" id="stat-music">—</div>
           <div class="stat-label">Music Tracks</div>
         </div>
-        
+        <div class="stat-card">
+          <div class="stat-icon">📁</div>
+          <div class="stat-value" id="stat-projects">—</div>
+          <div class="stat-label">Projects</div>
+        </div>
       </div>
 
       <div class="card">
@@ -294,11 +298,55 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
         <div class="section-desc">Manage built-in background tracks for users</div>
       </div>
 
-      <div class="upload-zone" onclick="document.getElementById('adminMusicInput').click()">
-        <span class="uz-icon"><i class="fas fa-cloud-upload-alt"></i></span>
-        <div class="uz-text">Click to upload music track<br><span style="font-size:12px">MP3, WAV, OGG supported</span></div>
+
+      <!-- Tab switcher: Upload vs Link -->
+      <div style="display:flex;gap:0;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:14px">
+        <button id="atab-upload" onclick="switchAddTab('upload')" style="flex:1;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff;transition:all .2s">
+          <i class="fas fa-cloud-upload-alt"></i> Upload File
+        </button>
+        <button id="atab-link" onclick="switchAddTab('link')" style="flex:1;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
+          <i class="fas fa-link"></i> Add via Link
+        </button>
       </div>
-      <input type="file" id="adminMusicInput" accept="audio/*" style="display:none" onchange="uploadAdminMusic(event)">
+
+      <!-- Upload panel -->
+      <div id="apanel-upload">
+        <div class="upload-zone" onclick="document.getElementById('adminMusicInput').click()">
+          <span class="uz-icon"><i class="fas fa-cloud-upload-alt"></i></span>
+          <div class="uz-text">Click to upload music track<br><span style="font-size:12px">MP3, WAV, OGG supported</span></div>
+        </div>
+        <input type="file" id="adminMusicInput" accept="audio/*" style="display:none" onchange="uploadAdminMusic(event)">
+        <button class="btn btn-ghost" style="margin-top:8px;font-size:12px" onclick="migrateOldMusic()" title="Fix old tracks that don\'t play"><i class="fas fa-sync"></i> Fix Old Tracks</button>
+      </div>
+
+      <!-- Link panel -->
+      <div id="apanel-link" style="display:none">
+        <div style="background:var(--surface2);border-radius:12px;padding:16px;border:1px solid var(--border)">
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Track Name</label>
+            <input class="form-input" id="linkMusicName" placeholder="e.g. Lofi Chill Beats" style="width:100%">
+          </div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Direct Audio URL</label>
+            <input class="form-input" id="linkMusicUrl" placeholder="https://example.com/music.mp3" style="width:100%" oninput="onLinkUrlInput()">
+            <div style="font-size:11px;color:var(--muted);margin-top:5px"><i class="fas fa-info-circle"></i> Direct MP3/WAV/OGG link. Google Drive, Dropbox direct links supported.</div>
+          </div>
+          <div id="linkPreviewBar" style="display:none;margin-bottom:12px;background:var(--surface);border-radius:8px;padding:10px;border:1px solid var(--border)">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Preview</div>
+            <audio id="linkAudioPreview" controls style="width:100%;height:32px;border-radius:6px"></audio>
+            <div id="linkDurLabel" style="font-size:11px;color:var(--muted);margin-top:5px"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" style="flex:1" onclick="previewLinkMusic()"><i class="fas fa-play"></i> Preview</button>
+            <button class="btn btn-primary" style="flex:1" onclick="addLinkMusic()"><i class="fas fa-plus"></i> Add Track</button>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding:10px;background:rgba(124,92,252,.07);border-radius:8px;font-size:12px;color:var(--muted)">
+          <b style="color:var(--accent)">Supported links:</b><br>
+          Direct MP3/WAV/OGG/M4A URLs &bull; Google Drive direct download &bull; Dropbox (dl=1)
+        </div>
+      </div>
+
 
       <div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:13px;color:var(--muted)" id="musicCountLabel">0 tracks</span>
@@ -481,6 +529,87 @@ async function addTemplate() {
   showToast('✅','Template added!');
 }
 
+// ── ADD TAB SWITCH ──────────────────────────────────────────────
+function switchAddTab(tab) {
+  const isUpload = tab === 'upload';
+  document.getElementById('apanel-upload').style.display = isUpload ? 'block' : 'none';
+  document.getElementById('apanel-link').style.display   = isUpload ? 'none'  : 'block';
+  document.getElementById('atab-upload').style.background = isUpload ? 'var(--accent)' : 'transparent';
+  document.getElementById('atab-upload').style.color      = isUpload ? '#fff' : 'var(--muted)';
+  document.getElementById('atab-link').style.background   = isUpload ? 'transparent' : 'var(--accent)';
+  document.getElementById('atab-link').style.color        = isUpload ? 'var(--muted)' : '#fff';
+}
+
+function onLinkUrlInput() {
+  // Hide preview bar when URL changes
+  document.getElementById('linkPreviewBar').style.display = 'none';
+}
+
+function previewLinkMusic() {
+  const url = document.getElementById('linkMusicUrl').value.trim();
+  if (!url) { showToast('⚠️', 'Please enter a URL first'); return; }
+  const bar   = document.getElementById('linkPreviewBar');
+  const audio = document.getElementById('linkAudioPreview');
+  const label = document.getElementById('linkDurLabel');
+  audio.src   = url;
+  bar.style.display = 'block';
+  audio.onloadedmetadata = () => {
+    const d = Math.round(audio.duration);
+    label.textContent = `Duration: ${Math.floor(d/60)}:${String(d%60).padStart(2,'0')}`;
+  };
+  audio.onerror = () => {
+    bar.style.display = 'none';
+    showToast('❌', 'Cannot load audio — check the URL or CORS policy');
+  };
+}
+
+async function addLinkMusic() {
+  const url  = document.getElementById('linkMusicUrl').value.trim();
+  const name = document.getElementById('linkMusicName').value.trim() || url.split('/').pop().split('?')[0] || 'Unknown Track';
+  if (!url) { showToast('⚠️', 'Please enter a URL'); return; }
+
+  // Get duration from preview audio if available
+  const previewAudio = document.getElementById('linkAudioPreview');
+  let durStr = '—';
+  if (previewAudio.src === url && previewAudio.duration && !isNaN(previewAudio.duration)) {
+    const d = Math.round(previewAudio.duration);
+    durStr = `${Math.floor(d/60)}:${String(d%60).padStart(2,'0')}`;
+  }
+
+  try {
+    const res = await fetch('/api/music/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, url, duration: durStr, start: 0, end: null })
+    });
+    const data = await res.json();
+    if (data.success) {
+      allMusic.push(data.music);
+      renderAdminMusic(); updateStats();
+      // Reset fields
+      document.getElementById('linkMusicName').value = '';
+      document.getElementById('linkMusicUrl').value  = '';
+      document.getElementById('linkPreviewBar').style.display = 'none';
+      showToast('✅', `"${name}" added to library!`);
+    } else {
+      showToast('❌', 'Failed to add track');
+    }
+  } catch(e) {
+    showToast('❌', 'Error: ' + e.message);
+  }
+}
+
+async function migrateOldMusic() {
+  const res = await fetch('/api/music/migrate-to-db', {method:'POST'});
+  const data = await res.json();
+  if (data.success) {
+    showToast('✅', `Migrated ${data.migrated} track(s) to database storage`);
+    loadMusic();
+  } else {
+    showToast('❌', 'Migration failed');
+  }
+}
+
 async function uploadAdminMusic(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -495,11 +624,11 @@ async function uploadAdminMusic(event) {
   const res = await fetch('/api/upload/music', {method:'POST',body:fd});
   const data = await res.json();
   if (data.success) {
-    // Save to music list with real duration
+    // Update duration for the already-inserted record
     const addRes = await fetch('/api/music/add',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:data.name,url:data.url,duration:durStr})});
+      body:JSON.stringify({name:data.name,url:data.url,duration:durStr,id:data.id})});
     const added = await addRes.json();
-    allMusic.push(added.music);
+    if (added.music) allMusic.push(added.music);
     renderAdminMusic(); updateStats();
     showToast('🎵','Music uploaded!');
   }
