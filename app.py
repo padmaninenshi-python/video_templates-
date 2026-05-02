@@ -1,8 +1,16 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory, send_file, session, redirect, Response
-import os, json, uuid, io, sqlite3, time
+import os, json, uuid, io, sqlite3, time, subprocess, tempfile, shutil, platform
 from werkzeug.utils import secure_filename
 from functools import wraps
-import subprocess, tempfile, shutil, platform
+
+# Auto-install espeak-ng on Linux/Render if not present
+if platform.system() != 'Windows':
+    if not shutil.which('espeak-ng'):
+        try:
+            subprocess.run(['apt-get', 'install', '-y', 'espeak-ng', 'ffmpeg'],
+                         capture_output=True, timeout=120)
+        except Exception as e:
+            print('[startup] espeak-ng install failed:', e)
 
 IS_WINDOWS = platform.system() == 'Windows'
 ESPEAK_CMD = shutil.which('espeak-ng') or 'espeak-ng'
@@ -22,6 +30,10 @@ os.makedirs(MUSIC_FOLDER,  exist_ok=True)
 os.makedirs(VOICE_FOLDER,  exist_ok=True)
 
 DB_PATH = 'database.db'
+
+# ══════════════════════════════════════════════════════════════════
+# SQLite helpers
+# ══════════════════════════════════════════════════════════════════
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -49,11 +61,13 @@ def init_db():
     c.execute('SELECT COUNT(*) FROM templates')
     if c.fetchone()[0] == 0:
         _seed_templates(c)
+    # Migration: add html_content column if it doesn't exist
     try:
         c.execute('ALTER TABLE templates ADD COLUMN html_content TEXT')
         conn.commit()
     except:
-        pass
+        pass  # Column already exists
+    # Migration: add music_data and mime_type columns if not exist
     for col_sql in [
         'ALTER TABLE music ADD COLUMN music_data BLOB',
         'ALTER TABLE music ADD COLUMN mime_type TEXT'
@@ -62,7 +76,7 @@ def init_db():
             c.execute(col_sql)
             conn.commit()
         except:
-            pass
+            pass  # Column already exists
     conn.commit(); conn.close()
 
 def _seed_templates(c):
@@ -202,9 +216,9 @@ def generate_tts():
                 if f and os.path.exists(f): os.unlink(f)
             except: pass
 
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 # PAGES
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/')
 def index(): return render_template('index.html')
@@ -227,9 +241,9 @@ def admin_logout():
 @admin_required
 def admin(): return render_template('admin.html')
 
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 # TEMPLATES API
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/api/templates', methods=['GET'])
 def get_templates():
@@ -250,9 +264,11 @@ def add_template():
 
 @app.route('/api/templates/<tid>', methods=['GET'])
 def get_template_html(tid):
+    # First try file on disk
     fpath = os.path.join(TEMPLATES_FOLDER, f'{tid}.html')
     if os.path.exists(fpath):
         return send_from_directory(TEMPLATES_FOLDER, f'{tid}.html')
+    # Fallback: check DB html_content (custom templates)
     conn = get_db()
     row = conn.execute('SELECT html_content FROM templates WHERE id=?', (tid,)).fetchone()
     conn.close()
@@ -273,9 +289,9 @@ def delete_template(tid):
     conn.execute('DELETE FROM templates WHERE id=?',(tid,))
     conn.commit(); conn.close(); return jsonify({'success':True})
 
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 # UPLOAD API
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/api/upload/images', methods=['POST'])
 def upload_images():
@@ -299,11 +315,13 @@ def upload_music():
     file_data = f.read()
     mime = f.mimetype or 'audio/mpeg'
     mid = uuid.uuid4().hex[:8]
+    # Store binary in DB so it persists across Render restarts
     conn = get_db()
     conn.execute('INSERT INTO music (id,name,url,duration,start,end,music_data,mime_type) VALUES (?,?,?,?,?,?,?,?)',
         (mid, fn, f'/api/music/{mid}/file', '—', 0, None, file_data, mime))
     conn.commit()
     conn.close()
+    # Also try saving to disk as fallback
     try:
         os.makedirs(MUSIC_FOLDER, exist_ok=True)
         with open(os.path.join(MUSIC_FOLDER, uid), 'wb') as out:
@@ -329,9 +347,9 @@ def serve_music_file(mid):
         }
     )
 
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 # MUSIC API
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/api/music', methods=['GET'])
 def get_music():
@@ -342,12 +360,15 @@ def get_music():
 @app.route('/api/music/add', methods=['POST'])
 def add_music():
     data = request.json
+    # If URL already points to our /api/music/<id>/file route, extract the id
     url = data.get('url','')
     import re
     m = re.match(r'/api/music/([^/]+)/file', url)
     if m:
+        # Music was already inserted by upload_music, just return it
         mid = m.group(1)
         conn = get_db()
+        # Update duration/start/end if provided
         conn.execute('UPDATE music SET duration=?, start=?, end=? WHERE id=?',
             (str(data.get('duration','—')), data.get('start',0), data.get('end'), mid))
         conn.commit()
@@ -383,9 +404,9 @@ def trim_music(mid):
     conn.execute('UPDATE music SET start=?,end=? WHERE id=?',(data.get('start',0),data.get('end'),mid))
     conn.commit(); conn.close(); return jsonify({'success':True})
 
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 # SETTINGS API
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/api/settings', methods=['GET'])
 def get_settings_api():
@@ -400,9 +421,9 @@ def save_settings_api():
     if data.get('new_password'):   set_setting('admin_password',data['new_password'])
     return jsonify({'success':True})
 
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 # PROJECTS API
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
 
 @app.route('/api/project/save', methods=['POST'])
 def save_project():
@@ -430,8 +451,10 @@ def list_projects():
         result.append(p)
     return jsonify(result)
 
+# ══════════════════════════════════════════════════════════════════
 @app.route('/api/music/migrate-to-db', methods=['POST'])
 def migrate_music_to_db():
+    """Migrate existing /static/music/ files into DB blob storage."""
     conn = get_db()
     rows = conn.execute("SELECT id, url FROM music WHERE music_data IS NULL").fetchall()
     migrated = 0
@@ -439,7 +462,8 @@ def migrate_music_to_db():
         url = row['url']
         if not url or url.startswith('/api/music/'):
             continue
-        path = url.lstrip('/')
+        # Try to read from disk
+        path = url.lstrip('/')  # e.g. static/music/xxx.mp3
         if os.path.exists(path):
             with open(path, 'rb') as f:
                 data = f.read()
