@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: reel-generator
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    nativePackages:
+      - espeak-ng
+      - ffmpeg
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
