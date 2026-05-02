@@ -3,17 +3,7 @@ import os, json, uuid, io, sqlite3, time, subprocess, tempfile, shutil, platform
 from werkzeug.utils import secure_filename
 from functools import wraps
 
-# Auto-install espeak-ng on Linux/Render if not present
-if platform.system() != 'Windows':
-    if not shutil.which('espeak-ng'):
-        try:
-            subprocess.run(['apt-get', 'install', '-y', 'espeak-ng', 'ffmpeg'],
-                         capture_output=True, timeout=120)
-        except Exception as e:
-            print('[startup] espeak-ng install failed:', e)
-
 IS_WINDOWS = platform.system() == 'Windows'
-ESPEAK_CMD = shutil.which('espeak-ng') or 'espeak-ng'
 
 app = Flask(__name__)
 app.secret_key = 'reel_generator_secret_2024'
@@ -66,7 +56,7 @@ def init_db():
         c.execute('ALTER TABLE templates ADD COLUMN html_content TEXT')
         conn.commit()
     except:
-        pass  # Column already exists
+        pass
     # Migration: add music_data and mime_type columns if not exist
     for col_sql in [
         'ALTER TABLE music ADD COLUMN music_data BLOB',
@@ -76,7 +66,7 @@ def init_db():
             c.execute(col_sql)
             conn.commit()
         except:
-            pass  # Column already exists
+            pass
     conn.commit(); conn.close()
 
 def _seed_templates(c):
@@ -139,22 +129,112 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ================================================================
-# TTS - Windows: browser | Render/Linux: espeak-ng (offline)
-# ================================================================
+# ══════════════════════════════════════════════════════════════════
+# TTS — gTTS (Google Text-to-Speech) — works on Render, no system deps
+# ══════════════════════════════════════════════════════════════════
 
-ESPEAK_LANG_MAP = {
-    'hi-IN':'hi',  'en-IN':'en',   'gu-IN':'gu',  'mr-IN':'mr',
-    'pa-IN':'pa',  'ta-IN':'ta',   'te-IN':'te',  'kn-IN':'kn',
-    'bn-IN':'bn',  'ml-IN':'ml',   'or-IN':'or',  'as-IN':'as',
-    'ne-IN':'ne',  'ur-IN':'ur',   'en-US':'en-us','en-GB':'en-gb',
-    'fr-FR':'fr',  'de-DE':'de',   'es-ES':'es',  'ar-SA':'ar',
-    'ja-JP':'ja',  'zh-CN':'cmn',
+# gTTS language map (lang code → gTTS tld/lang)
+GTTS_LANG_MAP = {
+    'hi-IN': ('hi', 'com'),
+    'en-IN': ('en', 'co.in'),
+    'gu-IN': ('gu', 'com'),
+    'mr-IN': ('mr', 'com'),
+    'pa-IN': ('pa', 'com'),
+    'ta-IN': ('ta', 'com'),
+    'te-IN': ('te', 'com'),
+    'kn-IN': ('kn', 'com'),
+    'bn-IN': ('bn', 'com'),
+    'ml-IN': ('ml', 'com'),
+    'or-IN': ('or', 'com'),
+    'ne-IN': ('ne', 'com'),
+    'ur-IN': ('ur', 'com'),
+    'en-US': ('en', 'com'),
+    'en-GB': ('en', 'co.uk'),
+    'fr-FR': ('fr', 'com'),
+    'de-DE': ('de', 'com'),
+    'es-ES': ('es', 'com'),
+    'ar-SA': ('ar', 'com'),
+    'ja-JP': ('ja', 'com'),
+    'zh-CN': ('zh-CN', 'com'),
 }
+
+def _try_gtts(text, lang_code, slow=False):
+    """
+    Try gTTS (Google TTS). Returns mp3 bytes or None.
+    gTTS calls Google Translate TTS API — needs internet on Render (which it has).
+    """
+    try:
+        from gtts import gTTS
+        lang, tld = GTTS_LANG_MAP.get(lang_code, ('hi', 'com'))
+        tts = gTTS(text=text, lang=lang, tld=tld, slow=slow)
+        buf = io.BytesIO()
+        tts.write_to_fp(buf)
+        buf.seek(0)
+        data = buf.read()
+        if len(data) > 500:
+            print(f'[TTS] ✅ gTTS success — {len(data)} bytes, lang={lang}, tld={tld}')
+            return data
+        print('[TTS] gTTS returned empty audio')
+        return None
+    except Exception as e:
+        print(f'[TTS] gTTS failed: {e}')
+        return None
+
+def _try_google_translate_tts(text, lang_code, slow=False):
+    """
+    Direct Google Translate TTS API call (same as browser uses).
+    Fallback if gTTS library fails.
+    """
+    try:
+        import urllib.request
+        lang_short = GTTS_LANG_MAP.get(lang_code, (lang_code.split('-')[0], 'com'))[0]
+        # Split text into chunks (GT TTS max ~200 chars)
+        chunks = []
+        words = text.split()
+        cur = ''
+        for w in words:
+            if len(cur) + len(w) + 1 > 180:
+                if cur: chunks.append(cur.strip())
+                cur = w
+            else:
+                cur = (cur + ' ' + w).strip()
+        if cur: chunks.append(cur)
+        if not chunks: chunks = [text[:180]]
+
+        all_bytes = b''
+        for chunk in chunks:
+            import urllib.parse
+            url = (
+                f'https://translate.googleapis.com/translate_tts'
+                f'?ie=UTF-8&q={urllib.parse.quote(chunk)}'
+                f'&tl={urllib.parse.quote(lang_short)}'
+                f'&total=1&idx=0&textlen={len(chunk)}'
+                f'&client=gtx&prev=input'
+            )
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; Caryanams/1.0)'
+            })
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                chunk_bytes = resp.read()
+                if len(chunk_bytes) > 100:
+                    all_bytes += chunk_bytes
+
+        if len(all_bytes) > 500:
+            print(f'[TTS] ✅ Google Translate TTS fallback — {len(all_bytes)} bytes')
+            return all_bytes
+        return None
+    except Exception as e:
+        print(f'[TTS] Google Translate TTS fallback failed: {e}')
+        return None
 
 @app.route('/api/tts/check', methods=['GET'])
 def tts_check():
-    return jsonify({'server_tts': not IS_WINDOWS})
+    """Check if server-side TTS is available."""
+    try:
+        import gtts
+        return jsonify({'server_tts': True, 'engine': 'gTTS'})
+    except ImportError:
+        return jsonify({'server_tts': True, 'engine': 'google-translate-api'})
 
 @app.route('/api/tts', methods=['POST'])
 def generate_tts():
@@ -166,55 +246,42 @@ def generate_tts():
     if not text:
         return jsonify({'error': 'Text required'}), 400
 
-    if IS_WINDOWS:
-        return jsonify({'use_browser': True, 'text': text}), 202
+    print(f'[TTS] Request: lang={lang_code}, slow={slow}, text_len={len(text)}')
 
-    espeak_lang = ESPEAK_LANG_MAP.get(lang_code, lang_code.split('-')[0])
-    speed = '120' if slow else '150'
-    tmp_wav = None
-    tmp_mp3 = None
+    # ── METHOD 1: gTTS library ────────────────────────────────────
+    audio_data = _try_gtts(text, lang_code, slow)
+
+    # ── METHOD 2: Direct Google Translate API ────────────────────
+    if not audio_data:
+        audio_data = _try_google_translate_tts(text, lang_code, slow)
+
+    # ── All methods failed ────────────────────────────────────────
+    if not audio_data:
+        print('[TTS] All server methods failed — telling browser to use SpeechSynthesis')
+        return jsonify({
+            'use_browser': True,
+            'text': text,
+            'lang': lang_code,
+            'error': 'Server TTS unavailable — browser fallback'
+        }), 202
+
+    # ── Success: return MP3 bytes ─────────────────────────────────
+    # Encode translated text safely for header
     try:
-        tmp_wav = tempfile.mktemp(suffix='.wav')
-        result = subprocess.run(
-            [ESPEAK_CMD, '-v', espeak_lang, '-s', speed, '-w', tmp_wav, text],
-            capture_output=True, timeout=30
-        )
-        if result.returncode != 0:
-            err = result.stderr.decode('utf-8', errors='replace')
-            raise Exception('espeak-ng error: ' + err)
-        if not os.path.exists(tmp_wav) or os.path.getsize(tmp_wav) < 100:
-            raise Exception('Audio generate nahi hua')
+        translated_header = text.encode('utf-8').decode('latin-1', errors='replace')
+    except Exception:
+        translated_header = ''
 
-        ffmpeg = shutil.which('ffmpeg')
-        if ffmpeg:
-            tmp_mp3 = tempfile.mktemp(suffix='.mp3')
-            r = subprocess.run(
-                [ffmpeg, '-y', '-i', tmp_wav, '-codec:a', 'libmp3lame', '-qscale:a', '4', tmp_mp3],
-                capture_output=True, timeout=30
-            )
-            if r.returncode == 0 and os.path.exists(tmp_mp3):
-                with open(tmp_mp3, 'rb') as f: audio_data = f.read()
-                mimetype, ext = 'audio/mpeg', 'mp3'
-            else:
-                with open(tmp_wav, 'rb') as f: audio_data = f.read()
-                mimetype, ext = 'audio/wav', 'wav'
-        else:
-            with open(tmp_wav, 'rb') as f: audio_data = f.read()
-            mimetype, ext = 'audio/wav', 'wav'
-
-        return Response(audio_data, mimetype=mimetype, headers={
-            'Content-Disposition': 'inline; filename="voice.' + ext + '"',
+    return Response(
+        audio_data,
+        mimetype='audio/mpeg',
+        headers={
+            'Content-Disposition': 'inline; filename="voice.mp3"',
             'Cache-Control': 'no-cache',
-            'X-Translated-Text': text.encode('utf-8').decode('latin-1', errors='replace')
-        })
-    except Exception as e:
-        print('[TTS] Error:', e)
-        return jsonify({'error': str(e)}), 500
-    finally:
-        for f in [tmp_wav, tmp_mp3]:
-            try:
-                if f and os.path.exists(f): os.unlink(f)
-            except: pass
+            'Content-Length': str(len(audio_data)),
+            'X-Translated-Text': translated_header,
+        }
+    )
 
 # ══════════════════════════════════════════════════════════════════
 # PAGES
@@ -264,16 +331,13 @@ def add_template():
 
 @app.route('/api/templates/<tid>', methods=['GET'])
 def get_template_html(tid):
-    # First try file on disk
     fpath = os.path.join(TEMPLATES_FOLDER, f'{tid}.html')
     if os.path.exists(fpath):
         return send_from_directory(TEMPLATES_FOLDER, f'{tid}.html')
-    # Fallback: check DB html_content (custom templates)
     conn = get_db()
     row = conn.execute('SELECT html_content FROM templates WHERE id=?', (tid,)).fetchone()
     conn.close()
     if row and row['html_content']:
-        from flask import Response
         return Response(row['html_content'], mimetype='text/html')
     return jsonify({'error':f'Template {tid} not found'}),404
 
@@ -315,13 +379,11 @@ def upload_music():
     file_data = f.read()
     mime = f.mimetype or 'audio/mpeg'
     mid = uuid.uuid4().hex[:8]
-    # Store binary in DB so it persists across Render restarts
     conn = get_db()
     conn.execute('INSERT INTO music (id,name,url,duration,start,end,music_data,mime_type) VALUES (?,?,?,?,?,?,?,?)',
         (mid, fn, f'/api/music/{mid}/file', '—', 0, None, file_data, mime))
     conn.commit()
     conn.close()
-    # Also try saving to disk as fallback
     try:
         os.makedirs(MUSIC_FOLDER, exist_ok=True)
         with open(os.path.join(MUSIC_FOLDER, uid), 'wb') as out:
@@ -360,15 +422,12 @@ def get_music():
 @app.route('/api/music/add', methods=['POST'])
 def add_music():
     data = request.json
-    # If URL already points to our /api/music/<id>/file route, extract the id
     url = data.get('url','')
     import re
     m = re.match(r'/api/music/([^/]+)/file', url)
     if m:
-        # Music was already inserted by upload_music, just return it
         mid = m.group(1)
         conn = get_db()
-        # Update duration/start/end if provided
         conn.execute('UPDATE music SET duration=?, start=?, end=? WHERE id=?',
             (str(data.get('duration','—')), data.get('start',0), data.get('end'), mid))
         conn.commit()
@@ -452,9 +511,11 @@ def list_projects():
     return jsonify(result)
 
 # ══════════════════════════════════════════════════════════════════
+# MUSIC MIGRATION
+# ══════════════════════════════════════════════════════════════════
+
 @app.route('/api/music/migrate-to-db', methods=['POST'])
 def migrate_music_to_db():
-    """Migrate existing /static/music/ files into DB blob storage."""
     conn = get_db()
     rows = conn.execute("SELECT id, url FROM music WHERE music_data IS NULL").fetchall()
     migrated = 0
@@ -462,8 +523,7 @@ def migrate_music_to_db():
         url = row['url']
         if not url or url.startswith('/api/music/'):
             continue
-        # Try to read from disk
-        path = url.lstrip('/')  # e.g. static/music/xxx.mp3
+        path = url.lstrip('/')
         if os.path.exists(path):
             with open(path, 'rb') as f:
                 data = f.read()
