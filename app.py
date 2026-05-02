@@ -21,10 +21,6 @@ os.makedirs(VOICE_FOLDER,  exist_ok=True)
 
 DB_PATH = 'database.db'
 
-# ══════════════════════════════════════════════════════════════════
-# SQLite helpers
-# ══════════════════════════════════════════════════════════════════
-
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -51,13 +47,11 @@ def init_db():
     c.execute('SELECT COUNT(*) FROM templates')
     if c.fetchone()[0] == 0:
         _seed_templates(c)
-    # Migration: add html_content column if it doesn't exist
     try:
         c.execute('ALTER TABLE templates ADD COLUMN html_content TEXT')
         conn.commit()
     except:
         pass
-    # Migration: add music_data and mime_type columns if not exist
     for col_sql in [
         'ALTER TABLE music ADD COLUMN music_data BLOB',
         'ALTER TABLE music ADD COLUMN mime_type TEXT'
@@ -104,7 +98,6 @@ def migrate_json_to_sqlite():
             c.execute('INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)',(k,str(v)))
         conn.commit(); conn.close()
         os.rename('db.json','db.json.migrated')
-        print('[DB] Migrated db.json → SQLite')
     except Exception as e:
         print(f'[DB] Migration error: {e}')
 
@@ -129,40 +122,23 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ══════════════════════════════════════════════════════════════════
-# TTS — gTTS (Google Text-to-Speech) — works on Render, no system deps
-# ══════════════════════════════════════════════════════════════════
-
-# gTTS language map (lang code → gTTS tld/lang)
+# ── gTTS Language Map ────────────────────────────────────────────
 GTTS_LANG_MAP = {
-    'hi-IN': ('hi', 'com'),
-    'en-IN': ('en', 'co.in'),
-    'gu-IN': ('gu', 'com'),
-    'mr-IN': ('mr', 'com'),
-    'pa-IN': ('pa', 'com'),
-    'ta-IN': ('ta', 'com'),
-    'te-IN': ('te', 'com'),
-    'kn-IN': ('kn', 'com'),
-    'bn-IN': ('bn', 'com'),
-    'ml-IN': ('ml', 'com'),
-    'or-IN': ('or', 'com'),
-    'ne-IN': ('ne', 'com'),
-    'ur-IN': ('ur', 'com'),
-    'en-US': ('en', 'com'),
-    'en-GB': ('en', 'co.uk'),
-    'fr-FR': ('fr', 'com'),
-    'de-DE': ('de', 'com'),
-    'es-ES': ('es', 'com'),
-    'ar-SA': ('ar', 'com'),
-    'ja-JP': ('ja', 'com'),
+    'hi-IN': ('hi', 'com'),   'en-IN': ('en', 'co.in'),
+    'gu-IN': ('gu', 'com'),   'mr-IN': ('mr', 'com'),
+    'pa-IN': ('pa', 'com'),   'ta-IN': ('ta', 'com'),
+    'te-IN': ('te', 'com'),   'kn-IN': ('kn', 'com'),
+    'bn-IN': ('bn', 'com'),   'ml-IN': ('ml', 'com'),
+    'or-IN': ('or', 'com'),   'ne-IN': ('ne', 'com'),
+    'ur-IN': ('ur', 'com'),   'en-US': ('en', 'com'),
+    'en-GB': ('en', 'co.uk'), 'fr-FR': ('fr', 'com'),
+    'de-DE': ('de', 'com'),   'es-ES': ('es', 'com'),
+    'ar-SA': ('ar', 'com'),   'ja-JP': ('ja', 'com'),
     'zh-CN': ('zh-CN', 'com'),
 }
 
+# ── TTS: gTTS (browser already translates, server just speaks) ───
 def _try_gtts(text, lang_code, slow=False):
-    """
-    Try gTTS (Google TTS). Returns mp3 bytes or None.
-    gTTS calls Google Translate TTS API — needs internet on Render (which it has).
-    """
     try:
         from gtts import gTTS
         lang, tld = GTTS_LANG_MAP.get(lang_code, ('hi', 'com'))
@@ -172,23 +148,17 @@ def _try_gtts(text, lang_code, slow=False):
         buf.seek(0)
         data = buf.read()
         if len(data) > 500:
-            print(f'[TTS] ✅ gTTS success — {len(data)} bytes, lang={lang}, tld={tld}')
+            print(f'[TTS] gTTS OK — {len(data)} bytes, lang={lang}')
             return data
-        print('[TTS] gTTS returned empty audio')
         return None
     except Exception as e:
         print(f'[TTS] gTTS failed: {e}')
         return None
 
 def _try_google_translate_tts(text, lang_code, slow=False):
-    """
-    Direct Google Translate TTS API call (same as browser uses).
-    Fallback if gTTS library fails.
-    """
     try:
-        import urllib.request
+        import urllib.request, urllib.parse
         lang_short = GTTS_LANG_MAP.get(lang_code, (lang_code.split('-')[0], 'com'))[0]
-        # Split text into chunks (GT TTS max ~200 chars)
         chunks = []
         words = text.split()
         cur = ''
@@ -200,36 +170,29 @@ def _try_google_translate_tts(text, lang_code, slow=False):
                 cur = (cur + ' ' + w).strip()
         if cur: chunks.append(cur)
         if not chunks: chunks = [text[:180]]
-
         all_bytes = b''
         for chunk in chunks:
-            import urllib.parse
-            url = (
-                f'https://translate.googleapis.com/translate_tts'
-                f'?ie=UTF-8&q={urllib.parse.quote(chunk)}'
-                f'&tl={urllib.parse.quote(lang_short)}'
-                f'&total=1&idx=0&textlen={len(chunk)}'
-                f'&client=gtx&prev=input'
-            )
+            url = (f'https://translate.googleapis.com/translate_tts'
+                   f'?ie=UTF-8&q={urllib.parse.quote(chunk)}'
+                   f'&tl={urllib.parse.quote(lang_short)}'
+                   f'&total=1&idx=0&textlen={len(chunk)}'
+                   f'&client=gtx&prev=input')
             req = urllib.request.Request(url, headers={
-                'User-Agent': 'Mozilla/5.0 (compatible; Caryanams/1.0)'
-            })
+                'User-Agent': 'Mozilla/5.0 (compatible; Caryanams/1.0)'})
             with urllib.request.urlopen(req, timeout=15) as resp:
                 chunk_bytes = resp.read()
                 if len(chunk_bytes) > 100:
                     all_bytes += chunk_bytes
-
         if len(all_bytes) > 500:
-            print(f'[TTS] ✅ Google Translate TTS fallback — {len(all_bytes)} bytes')
+            print(f'[TTS] GT-API OK — {len(all_bytes)} bytes')
             return all_bytes
         return None
     except Exception as e:
-        print(f'[TTS] Google Translate TTS fallback failed: {e}')
+        print(f'[TTS] GT-API failed: {e}')
         return None
 
 @app.route('/api/tts/check', methods=['GET'])
 def tts_check():
-    """Check if server-side TTS is available."""
     try:
         import gtts
         return jsonify({'server_tts': True, 'engine': 'gTTS'})
@@ -239,6 +202,8 @@ def tts_check():
 @app.route('/api/tts', methods=['POST'])
 def generate_tts():
     data      = request.get_json(force=True)
+    # NOTE: Browser already translated text to target language before sending!
+    # So 'text' here is already in the target language — just speak it.
     text      = (data.get('text') or '').strip()
     lang_code = data.get('lang', 'hi-IN')
     slow      = bool(data.get('slow', False))
@@ -246,47 +211,32 @@ def generate_tts():
     if not text:
         return jsonify({'error': 'Text required'}), 400
 
-    print(f'[TTS] Request: lang={lang_code}, slow={slow}, text_len={len(text)}')
+    print(f'[TTS] lang={lang_code}, slow={slow}, text="{text[:60]}"')
 
-    # ── METHOD 1: gTTS library ────────────────────────────────────
+    # Method 1: gTTS
     audio_data = _try_gtts(text, lang_code, slow)
-
-    # ── METHOD 2: Direct Google Translate API ────────────────────
+    # Method 2: Direct Google Translate TTS
     if not audio_data:
         audio_data = _try_google_translate_tts(text, lang_code, slow)
 
-    # ── All methods failed ────────────────────────────────────────
     if not audio_data:
-        print('[TTS] All server methods failed — telling browser to use SpeechSynthesis')
-        return jsonify({
-            'use_browser': True,
-            'text': text,
-            'lang': lang_code,
-            'error': 'Server TTS unavailable — browser fallback'
-        }), 202
+        return jsonify({'use_browser': True, 'text': text, 'lang': lang_code,
+                        'error': 'Server TTS unavailable'}), 202
 
-    # ── Success: return MP3 bytes ─────────────────────────────────
-    # Encode translated text safely for header
+    # Send translated text back in header so browser can display it
     try:
         translated_header = text.encode('utf-8').decode('latin-1', errors='replace')
     except Exception:
         translated_header = ''
 
-    return Response(
-        audio_data,
-        mimetype='audio/mpeg',
-        headers={
-            'Content-Disposition': 'inline; filename="voice.mp3"',
-            'Cache-Control': 'no-cache',
-            'Content-Length': str(len(audio_data)),
-            'X-Translated-Text': translated_header,
-        }
-    )
+    return Response(audio_data, mimetype='audio/mpeg', headers={
+        'Content-Disposition': 'inline; filename="voice.mp3"',
+        'Cache-Control': 'no-cache',
+        'Content-Length': str(len(audio_data)),
+        'X-Translated-Text': translated_header,
+    })
 
-# ══════════════════════════════════════════════════════════════════
-# PAGES
-# ══════════════════════════════════════════════════════════════════
-
+# ── PAGES ────────────────────────────────────────────────────────
 @app.route('/')
 def index(): return render_template('index.html')
 
@@ -308,10 +258,7 @@ def admin_logout():
 @admin_required
 def admin(): return render_template('admin.html')
 
-# ══════════════════════════════════════════════════════════════════
-# TEMPLATES API
-# ══════════════════════════════════════════════════════════════════
-
+# ── TEMPLATES API ────────────────────────────────────────────────
 @app.route('/api/templates', methods=['GET'])
 def get_templates():
     conn = get_db()
@@ -353,10 +300,7 @@ def delete_template(tid):
     conn.execute('DELETE FROM templates WHERE id=?',(tid,))
     conn.commit(); conn.close(); return jsonify({'success':True})
 
-# ══════════════════════════════════════════════════════════════════
-# UPLOAD API
-# ══════════════════════════════════════════════════════════════════
-
+# ── UPLOAD API ───────────────────────────────────────────────────
 @app.route('/api/upload/images', methods=['POST'])
 def upload_images():
     files = request.files.getlist('images')
@@ -382,8 +326,7 @@ def upload_music():
     conn = get_db()
     conn.execute('INSERT INTO music (id,name,url,duration,start,end,music_data,mime_type) VALUES (?,?,?,?,?,?,?,?)',
         (mid, fn, f'/api/music/{mid}/file', '—', 0, None, file_data, mime))
-    conn.commit()
-    conn.close()
+    conn.commit(); conn.close()
     try:
         os.makedirs(MUSIC_FOLDER, exist_ok=True)
         with open(os.path.join(MUSIC_FOLDER, uid), 'wb') as out:
@@ -399,20 +342,11 @@ def serve_music_file(mid):
     conn.close()
     if not row or not row['music_data']:
         return jsonify({'error': 'Music file not found'}), 404
-    return Response(
-        row['music_data'],
-        mimetype=row['mime_type'] or 'audio/mpeg',
-        headers={
-            'Content-Disposition': f'inline; filename="{row["name"]}"',
-            'Accept-Ranges': 'bytes',
-            'Cache-Control': 'public, max-age=3600'
-        }
-    )
+    return Response(row['music_data'], mimetype=row['mime_type'] or 'audio/mpeg',
+        headers={'Content-Disposition': f'inline; filename="{row["name"]}"',
+                 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=3600'})
 
-# ══════════════════════════════════════════════════════════════════
-# MUSIC API
-# ══════════════════════════════════════════════════════════════════
-
+# ── MUSIC API ────────────────────────────────────────────────────
 @app.route('/api/music', methods=['GET'])
 def get_music():
     conn = get_db()
@@ -463,10 +397,7 @@ def trim_music(mid):
     conn.execute('UPDATE music SET start=?,end=? WHERE id=?',(data.get('start',0),data.get('end'),mid))
     conn.commit(); conn.close(); return jsonify({'success':True})
 
-# ══════════════════════════════════════════════════════════════════
-# SETTINGS API
-# ══════════════════════════════════════════════════════════════════
-
+# ── SETTINGS API ─────────────────────────────────────────────────
 @app.route('/api/settings', methods=['GET'])
 def get_settings_api():
     return jsonify({'app_name':get_setting('app_name','Caryanams'),
@@ -480,10 +411,7 @@ def save_settings_api():
     if data.get('new_password'):   set_setting('admin_password',data['new_password'])
     return jsonify({'success':True})
 
-# ══════════════════════════════════════════════════════════════════
-# PROJECTS API
-# ══════════════════════════════════════════════════════════════════
-
+# ── PROJECTS API ─────────────────────────────────────────────────
 @app.route('/api/project/save', methods=['POST'])
 def save_project():
     data = request.json; pid = uuid.uuid4().hex[:10]
@@ -510,10 +438,6 @@ def list_projects():
         result.append(p)
     return jsonify(result)
 
-# ══════════════════════════════════════════════════════════════════
-# MUSIC MIGRATION
-# ══════════════════════════════════════════════════════════════════
-
 @app.route('/api/music/migrate-to-db', methods=['POST'])
 def migrate_music_to_db():
     conn = get_db()
@@ -521,12 +445,10 @@ def migrate_music_to_db():
     migrated = 0
     for row in rows:
         url = row['url']
-        if not url or url.startswith('/api/music/'):
-            continue
+        if not url or url.startswith('/api/music/'): continue
         path = url.lstrip('/')
         if os.path.exists(path):
-            with open(path, 'rb') as f:
-                data = f.read()
+            with open(path, 'rb') as f: data = f.read()
             ext = path.rsplit('.', 1)[-1].lower()
             mime_map = {'mp3':'audio/mpeg','wav':'audio/wav','ogg':'audio/ogg','m4a':'audio/mp4'}
             mime = mime_map.get(ext, 'audio/mpeg')
@@ -534,10 +456,8 @@ def migrate_music_to_db():
             conn.execute('UPDATE music SET music_data=?, mime_type=?, url=? WHERE id=?',
                 (data, mime, new_url, row['id']))
             migrated += 1
-    conn.commit()
-    conn.close()
+    conn.commit(); conn.close()
     return jsonify({'success': True, 'migrated': migrated})
-
 
 init_db()
 migrate_json_to_sqlite()
