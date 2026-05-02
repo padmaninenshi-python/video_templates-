@@ -58,7 +58,8 @@ def init_db():
         html_content TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS music (
         id TEXT PRIMARY KEY, name TEXT, url TEXT,
-        duration TEXT DEFAULT "—", start REAL DEFAULT 0, end REAL)''')
+        duration TEXT DEFAULT "—", start REAL DEFAULT 0, end REAL,
+        music_data BLOB, mime_type TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS projects (
         id TEXT PRIMARY KEY, name TEXT, template TEXT,
         images TEXT, text TEXT, music TEXT, created REAL)''')
@@ -75,6 +76,16 @@ def init_db():
         conn.commit()
     except:
         pass  # Column already exists
+    # Migration: add music_data and mime_type columns if not exist
+    for col_sql in [
+        'ALTER TABLE music ADD COLUMN music_data BLOB',
+        'ALTER TABLE music ADD COLUMN mime_type TEXT'
+    ]:
+        try:
+            c.execute(col_sql)
+            conn.commit()
+        except:
+            pass  # Column already exists
     conn.commit(); conn.close()
 
 def _seed_templates(c):
@@ -294,9 +305,42 @@ def upload_images():
 def upload_music():
     f = request.files.get('music')
     if not f or not _allowed_file(f.filename, ALLOWED_AUDIO): return jsonify({'error':'Invalid file'}),400
-    fn = secure_filename(f.filename); uid = f'{uuid.uuid4().hex[:8]}_{fn}'
-    f.save(os.path.join(MUSIC_FOLDER, uid))
-    return jsonify({'success':True,'url':f'/static/music/{uid}','name':fn})
+    fn = secure_filename(f.filename)
+    uid = f'{uuid.uuid4().hex[:8]}_{fn}'
+    file_data = f.read()
+    mime = f.mimetype or 'audio/mpeg'
+    mid = uuid.uuid4().hex[:8]
+    # Store binary in DB so it persists across Render restarts
+    conn = get_db()
+    conn.execute('INSERT INTO music (id,name,url,duration,start,end,music_data,mime_type) VALUES (?,?,?,?,?,?,?,?)',
+        (mid, fn, f'/api/music/{mid}/file', '—', 0, None, file_data, mime))
+    conn.commit()
+    conn.close()
+    # Also try saving to disk as fallback
+    try:
+        os.makedirs(MUSIC_FOLDER, exist_ok=True)
+        with open(os.path.join(MUSIC_FOLDER, uid), 'wb') as out:
+            out.write(file_data)
+    except Exception:
+        pass
+    return jsonify({'success':True,'url':f'/api/music/{mid}/file','name':fn,'id':mid})
+
+@app.route('/api/music/<mid>/file', methods=['GET'])
+def serve_music_file(mid):
+    conn = get_db()
+    row = conn.execute('SELECT music_data, mime_type, name FROM music WHERE id=?', (mid,)).fetchone()
+    conn.close()
+    if not row or not row['music_data']:
+        return jsonify({'error': 'Music file not found'}), 404
+    return Response(
+        row['music_data'],
+        mimetype=row['mime_type'] or 'audio/mpeg',
+        headers={
+            'Content-Disposition': f'inline; filename="{row["name"]}"',
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'public, max-age=3600'
+        }
+    )
 
 # ══════════════════════════════════════════════════════════════════
 # MUSIC API
@@ -304,18 +348,39 @@ def upload_music():
 
 @app.route('/api/music', methods=['GET'])
 def get_music():
-    conn = get_db(); rows = conn.execute('SELECT * FROM music').fetchall()
+    conn = get_db()
+    rows = conn.execute('SELECT id, name, url, duration, start, end FROM music').fetchall()
     conn.close(); return jsonify([dict(r) for r in rows])
 
 @app.route('/api/music/add', methods=['POST'])
 def add_music():
-    data = request.json; mid = uuid.uuid4().hex[:8]
+    data = request.json
+    # If URL already points to our /api/music/<id>/file route, extract the id
+    url = data.get('url','')
+    import re
+    m = re.match(r'/api/music/([^/]+)/file', url)
+    if m:
+        # Music was already inserted by upload_music, just return it
+        mid = m.group(1)
+        conn = get_db()
+        # Update duration/start/end if provided
+        conn.execute('UPDATE music SET duration=?, start=?, end=? WHERE id=?',
+            (str(data.get('duration','—')), data.get('start',0), data.get('end'), mid))
+        conn.commit()
+        row = conn.execute('SELECT * FROM music WHERE id=?',(mid,)).fetchone()
+        conn.close()
+        if row:
+            r = dict(row); r.pop('music_data', None)
+            return jsonify({'success':True,'music':r})
+    mid = uuid.uuid4().hex[:8]
     conn = get_db()
     conn.execute('INSERT INTO music (id,name,url,duration,start,end) VALUES (?,?,?,?,?,?)',
-        (mid,data.get('name'),data.get('url'),str(data.get('duration','—')),data.get('start',0),data.get('end')))
+        (mid,data.get('name'),url,str(data.get('duration','—')),data.get('start',0),data.get('end')))
     conn.commit()
     row = conn.execute('SELECT * FROM music WHERE id=?',(mid,)).fetchone()
-    conn.close(); return jsonify({'success':True,'music':dict(row)})
+    conn.close()
+    r = dict(row); r.pop('music_data', None)
+    return jsonify({'success':True,'music':r})
 
 @app.route('/api/music/<mid>', methods=['DELETE'])
 def delete_music(mid):
@@ -382,6 +447,33 @@ def list_projects():
     return jsonify(result)
 
 # ══════════════════════════════════════════════════════════════════
+@app.route('/api/music/migrate-to-db', methods=['POST'])
+def migrate_music_to_db():
+    """Migrate existing /static/music/ files into DB blob storage."""
+    conn = get_db()
+    rows = conn.execute("SELECT id, url FROM music WHERE music_data IS NULL").fetchall()
+    migrated = 0
+    for row in rows:
+        url = row['url']
+        if not url or url.startswith('/api/music/'):
+            continue
+        # Try to read from disk
+        path = url.lstrip('/')  # e.g. static/music/xxx.mp3
+        if os.path.exists(path):
+            with open(path, 'rb') as f:
+                data = f.read()
+            ext = path.rsplit('.', 1)[-1].lower()
+            mime_map = {'mp3':'audio/mpeg','wav':'audio/wav','ogg':'audio/ogg','m4a':'audio/mp4'}
+            mime = mime_map.get(ext, 'audio/mpeg')
+            new_url = f'/api/music/{row["id"]}/file'
+            conn.execute('UPDATE music SET music_data=?, mime_type=?, url=? WHERE id=?',
+                (data, mime, new_url, row['id']))
+            migrated += 1
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'migrated': migrated})
+
+
 init_db()
 migrate_json_to_sqlite()
 
